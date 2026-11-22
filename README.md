@@ -5,6 +5,7 @@ vLLM plugin for diffusion language models. Install it and vLLM loads it; no fork
 | Family | Checkpoints | Kind | Default policy |
 |---|---|---|---|
 | LLaDA2.0 / 2.1 / 2.2 | `inclusionAI/LLaDA2.x-mini`, `-flash` | block diffusion | `low_confidence` / `joint` / `indel` |
+| Stable-DiffCoder | `ByteDance-Seed/Stable-DiffCoder-8B-{Base,Instruct}` | block diffusion | `low_confidence` |
 | SDAR, TraDo | `JetLM/SDAR-*-Chat`, `Gen-Verse/TraDo-*` | block diffusion | `low_confidence` |
 | Fast-dLLM v2 | `Efficient-Large-Model/Fast_dLLM_v2_*` | block diffusion | `fast_dllm` |
 | LLaDA-8B | `GSAI-ML/LLaDA-8B-Instruct` | full attention, decoded per canvas | `llada` |

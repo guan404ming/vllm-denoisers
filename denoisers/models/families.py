@@ -11,6 +11,7 @@ from denoisers.models.llada2.config import LLaDA2MoeConfig
 from denoisers.models.llada2.tokenizer import CustomFastTokenizer
 from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
 from denoisers.models.sigma.config import SigmaModelConfig
+from denoisers.models.stable_diffcoder.model import StableDiffcoderModelConfig
 from denoisers.models.verify import BlockDiffusionModelConfig
 
 FAMILIES = (
@@ -50,6 +51,11 @@ def register_all() -> None:
         "NemotronLabsSigmaModel",
         "denoisers.models.sigma.model:NemotronLabsSigmaModel",
         verifier=SigmaModelConfig,
+    )
+    register_family(
+        "StableDiffcoderForCausalLM",
+        "denoisers.models.stable_diffcoder.model:StableDiffcoderForCausalLM",
+        verifier=StableDiffcoderModelConfig,
     )
     register_family(
         "DiffusionGemmaForBlockDiffusion",
