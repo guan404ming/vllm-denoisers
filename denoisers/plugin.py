@@ -1,23 +1,27 @@
 from transformers import AutoConfig, AutoTokenizer
-from vllm.model_executor.models.config import MODELS_CONFIG_MAP
-
-from denoisers.models.dream.config import DreamConfig
-from denoisers.models.dream.model import DreamModelConfig
-from denoisers.models.dream.tokenizer import DreamTokenizer
-from denoisers.models.fast_dllm.config import FastDLLMQwenConfig
-from denoisers.models.diffusion_gemma.model import DiffusionGemmaForBlockDiffusionConfig
-from denoisers.models.fast_dllm.model import FastDLLMQwenForCausalLMConfig
-from denoisers.models.llada.config import LLaDAConfig
-from denoisers.models.llada.model import LLaDAModelLMConfig
-from denoisers.models.llada2.config import LLaDA2MoeConfig
-from denoisers.models.llada2.model import LLaDA2MoeModelLMConfig
-from denoisers.models.llada2.tokenizer import CustomFastTokenizer
-from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
-from denoisers.models.sdar.model import SDARForCausalLMConfig
 from vllm import ModelRegistry
+from vllm.model_executor.models.config import MODELS_CONFIG_MAP
 from vllm.v1.worker.gpu.spec_decode.utils import DraftTokensHandler
 
 from denoisers.canvas import prune
+from denoisers.models.diffusion_gemma.model import DiffusionGemmaForBlockDiffusionConfig
+from denoisers.models.dream.config import DreamConfig
+from denoisers.models.dream.tokenizer import DreamTokenizer
+from denoisers.models.fast_dllm.config import FastDLLMQwenConfig
+from denoisers.models.llada.config import LLaDAConfig
+from denoisers.models.llada2.config import LLaDA2MoeConfig
+from denoisers.models.llada2.tokenizer import CustomFastTokenizer
+from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
+from denoisers.models.verify import BlockDiffusionModelConfig
+
+FAMILIES = (
+    ("LLaDA2MoeModelLM", "llada2.model:LLaDA2MoeModelLM", LLaDA2MoeConfig, CustomFastTokenizer),
+    ("SDARForCausalLM", "sdar.model:SDARForCausalLM", SDARConfig, None),
+    ("SDARMoeForCausalLM", "sdar.model:SDARMoeForCausalLM", SDARMoeConfig, None),
+    ("Fast_dLLM_QwenForCausalLM", "fast_dllm.model:FastDLLMQwenForCausalLM", FastDLLMQwenConfig, None),
+    ("DreamModel", "dream.model:DreamModel", DreamConfig, DreamTokenizer),
+    ("LLaDAModelLM", "llada.model:LLaDAModelLM", LLaDAConfig, None),
+)
 
 _set_draft_tokens = DraftTokensHandler.set_draft_tokens
 
@@ -33,38 +37,27 @@ def set_draft_tokens(self, input_batch, draft_tokens) -> None:
         )
 
 
+def register_family(
+    architecture: str,
+    model: str,
+    config=None,
+    tokenizer=None,
+    verifier=BlockDiffusionModelConfig,
+) -> None:
+    if config is not None:
+        AutoConfig.register(config.model_type, config, exist_ok=True)
+    if tokenizer is not None:
+        AutoTokenizer.register(config, fast_tokenizer_class=tokenizer, exist_ok=True)
+    ModelRegistry.register_model(architecture, model)
+    MODELS_CONFIG_MAP[architecture] = verifier
+
+
 def register() -> None:
     DraftTokensHandler.set_draft_tokens = set_draft_tokens
-    AutoConfig.register("llada2_moe", LLaDA2MoeConfig, exist_ok=True)
-    AutoTokenizer.register(
-        LLaDA2MoeConfig, fast_tokenizer_class=CustomFastTokenizer, exist_ok=True
-    )
-    ModelRegistry.register_model(
-        "LLaDA2MoeModelLM", "denoisers.models.llada2.model:LLaDA2MoeModelLM"
-    )
-    MODELS_CONFIG_MAP["LLaDA2MoeModelLM"] = LLaDA2MoeModelLMConfig
-    AutoConfig.register("sdar", SDARConfig, exist_ok=True)
-    AutoConfig.register("sdar_moe", SDARMoeConfig, exist_ok=True)
-    ModelRegistry.register_model("SDARForCausalLM", "denoisers.models.sdar.model:SDARForCausalLM")
-    ModelRegistry.register_model(
-        "SDARMoeForCausalLM", "denoisers.models.sdar.model:SDARMoeForCausalLM"
-    )
-    MODELS_CONFIG_MAP["SDARForCausalLM"] = SDARForCausalLMConfig
-    MODELS_CONFIG_MAP["SDARMoeForCausalLM"] = SDARForCausalLMConfig
-    AutoConfig.register("Fast_dLLM_Qwen", FastDLLMQwenConfig, exist_ok=True)
-    ModelRegistry.register_model(
-        "Fast_dLLM_QwenForCausalLM", "denoisers.models.fast_dllm.model:FastDLLMQwenForCausalLM"
-    )
-    MODELS_CONFIG_MAP["Fast_dLLM_QwenForCausalLM"] = FastDLLMQwenForCausalLMConfig
-    ModelRegistry.register_model(
+    for architecture, model, config, tokenizer in FAMILIES:
+        register_family(architecture, f"denoisers.models.{model}", config, tokenizer)
+    register_family(
         "DiffusionGemmaForBlockDiffusion",
         "denoisers.models.diffusion_gemma.model:DiffusionGemma",
+        verifier=DiffusionGemmaForBlockDiffusionConfig,
     )
-    MODELS_CONFIG_MAP["DiffusionGemmaForBlockDiffusion"] = DiffusionGemmaForBlockDiffusionConfig
-    AutoConfig.register("Dream", DreamConfig, exist_ok=True)
-    AutoTokenizer.register(DreamConfig, fast_tokenizer_class=DreamTokenizer, exist_ok=True)
-    ModelRegistry.register_model("DreamModel", "denoisers.models.dream.model:DreamModel")
-    MODELS_CONFIG_MAP["DreamModel"] = DreamModelConfig
-    AutoConfig.register("llada", LLaDAConfig, exist_ok=True)
-    ModelRegistry.register_model("LLaDAModelLM", "denoisers.models.llada.model:LLaDAModelLM")
-    MODELS_CONFIG_MAP["LLaDAModelLM"] = LLaDAModelLMConfig
