@@ -4,6 +4,7 @@ from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 from denoisers.models.config import DecodeConfig
 from denoisers.policies import POLICIES
+from denoisers.pruners import PRUNERS
 from denoisers.registry import resolve
 from denoisers.scheduler.probe import uses_denoisers_scheduler
 
@@ -40,9 +41,10 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
             f"{name} needs --no-enable-chunked-prefill, or a denoisers scheduler-cls "
             "that aligns prefill chunks to the canvas."
         )
-    if getattr(hf_config, "prune_committed", False):
+    if getattr(hf_config, "pruner", None) is not None:
+        resolve(PRUNERS, hf_config.pruner)
         if scheduler.async_scheduling:
-            raise ValueError(f"{name} prune_committed needs --no-async-scheduling.")
+            raise ValueError(f"{name} pruner needs --no-async-scheduling.")
         scheduler.async_scheduling = False
     if vllm_config.attention_config.backend not in BACKENDS:
         raise ValueError(f"{name} needs --attention-backend TRITON_ATTN or FLASH_ATTN.")

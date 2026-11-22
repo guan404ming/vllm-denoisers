@@ -30,6 +30,7 @@ VLLM_PLUGINS=denoisers vllm serve inclusionAI/LLaDA2.0-mini \
 ## Docs
 
 - [models.md](docs/models.md): per-family flags and decode knobs.
+- [extending.md](docs/extending.md): custom decode policies, row pruners, and model families.
 - [scheduler.md](docs/scheduler.md): resident/active scheduling.
 - [diffusion_gemma.md](docs/diffusion_gemma.md): the DiffusionGemma sampler and read extras.
 - [deviations.md](docs/deviations.md): where decoding differs from the HF reference.
@@ -41,10 +42,12 @@ VLLM_PLUGINS=denoisers vllm serve inclusionAI/LLaDA2.0-mini \
 
 ```text
 denoisers/
-  plugin.py    entry point: configs, tokenizer, models, config hooks
+  plugin.py    entry point and register_family
+  registry.py  resolve a registered name or qualified class name
   canvas/      block runtime: state, transition, sampler, ModelState
-  policies/    low_confidence, joint, indel, fast_dllm, dream, entropy_bound, kernels
-  models/      one folder per family; shared mixin, verify, fp8 head
+  policies/    DecodePolicy and the built-in policies, kernels
+  pruners/     RowPruner and the masked pruner
+  models/      one folder per family; DecodeConfig, shared mixin, verify, fp8 head
   scheduler/   probe, ranking policy, vLLM scheduler
 patches/       vLLM patch for FLASH_ATTN block-range prefill
 tests/         CPU tests; llada2_eval.py runs parity and GSM8K on Modal

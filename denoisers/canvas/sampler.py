@@ -12,7 +12,7 @@ from vllm.v1.worker.gpu.sample.penalties import use_penalty
 
 from denoisers.canvas import prune
 from denoisers.canvas.batch import query_lens
-from denoisers.canvas.prune import active_rows, inverse_index
+from denoisers.canvas.prune import RowPruning, inverse_index
 from denoisers.canvas.state import CanvasState
 from denoisers.canvas.transition import advance
 from denoisers.policies.stats import row_stats
@@ -43,8 +43,7 @@ class BlockDiffusionSampler:
         max_model_len: int,
         compute_logits,
         vocab_size,
-        prune_committed: bool = False,
-        prune_refresh: int = 0,
+        pruning: RowPruning | None = None,
     ):
         self.sampling_states = sampler.sampling_states
         self.logprob_token_ids_state = sampler.logprob_token_ids_state
@@ -60,9 +59,7 @@ class BlockDiffusionSampler:
         self.stash_logprobs = policy.causal_commit
         self._stash: dict[int, LogprobsTensors] = {}
         self.aligned = policy.aligned
-        self.prune = prune_committed
-        self.refresh = prune_refresh
-        self.shifted = policy.shifted
+        self.pruning = pruning
         max_num_reqs = state.canvas.shape[0]
         device = state.canvas.device
         self._sampled = torch.zeros(
@@ -72,27 +69,24 @@ class BlockDiffusionSampler:
         self._need = torch.zeros(max_num_reqs, dtype=torch.int32, device=device)
         self._need_host = torch.zeros(max_num_reqs, dtype=torch.int32, pin_memory=True)
         self._commit_host = torch.zeros(max_num_reqs, dtype=torch.bool, pin_memory=True)
-        self._active_len_host = torch.full(
-            (max_num_reqs,), state.block_length, dtype=torch.int32, pin_memory=True
-        )
         self._need_event = torch.cuda.Event()
         self._budget = 0
         policy.bind(state)
-        if self.prune:
+        if pruning is not None:
             prune.provider = self.draft_widths
 
     def draft_widths(self, input_batch) -> np.ndarray:
         self._need_event.synchronize()
-        return self._active_len_host.numpy()[input_batch.idx_mapping_np]
+        return self.pruning.widths(input_batch.idx_mapping_np)
 
     def add_request(self, req_idx: int, sampling_params) -> None:
         if use_penalty(sampling_params):
             logger.warning_once("denoisers ignores repetition, frequency, and presence penalties.")
         self.sampling_states.add_request(req_idx, sampling_params)
         self.logprob_token_ids_state.add_request(req_idx, sampling_params)
-        if self.prune:
+        if self.pruning is not None:
             self._need_event.synchronize()
-            self._active_len_host[req_idx] = self.state.block_length
+            self.pruning.reset(req_idx)
         self.state.stop_at(
             req_idx, {sampling_params.eos_token_id, *(sampling_params.stop_token_ids or ())}
         )
@@ -139,7 +133,8 @@ class BlockDiffusionSampler:
             self._need[slot] = block - shift
             self._need_host[slot] = block - shift
             self._commit_host[slot] = False
-            self._active_len_host[slot] = block
+            if self.pruning is not None:
+                self.pruning.reset(slot)
             self._stash.pop(slot, None)
 
     def _process(self, logits, expanded, slots_np) -> torch.Tensor:
@@ -232,9 +227,8 @@ class BlockDiffusionSampler:
             ids = [input_batch.req_ids[i] for i in rows_np]
             probe.record(slots_np, ids, before.step, before.committing)
         self.req_states.draft_tokens[slots, : state.block_length] = after.canvas
-        if self.prune:
-            state.active[slots] = torch.arange(state.block_length, device=sampled.device)
-            state.active_len[slots] = state.block_length
+        if self.pruning is not None:
+            self.pruning.restore(slots)
         sampled[rows] = row_sampled.to(sampled.dtype)
         num_sampled[rows] = row_num_sampled.to(num_sampled.dtype)
 
@@ -262,8 +256,8 @@ class BlockDiffusionSampler:
         slots = input_batch.idx_mapping[: input_batch.num_reqs][rows]
         widths = async_tensor_h2d(widths_np.astype(np.int64), device=device)
         partial_np = widths_np < block
-        if self.prune:
-            partial_np &= self._active_len_host.numpy()[slots_np] >= block
+        if self.pruning is not None:
+            partial_np &= self.pruning.unpruned(slots_np)
         if partial_np.any():
             partial = async_tensor_h2d(partial_np, device=device)
             state.truncate(slots[partial], widths[partial])
@@ -281,17 +275,9 @@ class BlockDiffusionSampler:
             probe.record(
                 slots_np, [input_batch.req_ids[i] for i in rows_np], scores, before.committing
             )
-        if self.prune:
-            masked = before.canvas == state.mask_id
-            masked &= torch.arange(block, device=device) < before.width.unsqueeze(1)
-            full_next = after.committing | (after.step == 0)
-            if self.refresh > 0:
-                full_next |= after.step % self.refresh == 0
-            if logprob_args is not None or probe.enabled:
-                full_next |= True
-            active, active_len = active_rows(masked, before.width, full_next, self.shifted)
-            state.active[slots] = active
-            state.active_len[slots] = active_len.to(torch.int32)
+        if self.pruning is not None:
+            full = logprob_args is not None or probe.enabled
+            active = self.pruning.update(slots, before, after, full)
             self.req_states.draft_tokens[slots, :block] = after.canvas.gather(1, active)
         else:
             self.req_states.draft_tokens[slots, :block] = after.canvas
@@ -349,8 +335,8 @@ class BlockDiffusionSampler:
             )
         self._need_host.copy_(self._need, non_blocking=True)
         self._commit_host.copy_(self.state.committing, non_blocking=True)
-        if self.prune:
-            self._active_len_host.copy_(self.state.active_len, non_blocking=True)
+        if self.pruning is not None:
+            self.pruning.sync()
         self._need_event.record()
 
         logprobs = None

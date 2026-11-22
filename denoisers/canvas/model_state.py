@@ -9,8 +9,11 @@ from vllm.v1.worker.gpu.attn_utils import build_attn_metadata
 from vllm.v1.worker.gpu.model_states.interface import ModelState
 
 from denoisers.canvas.batch import per_token, prefill_block_ranges
+from denoisers.canvas.prune import RowPruning
 from denoisers.canvas.sampler import BlockDiffusionSampler
 from denoisers.canvas.state import CanvasState
+from denoisers.pruners import PRUNERS
+from denoisers.registry import resolve
 from denoisers.scheduler import probe
 
 
@@ -31,11 +34,10 @@ class BlockDiffusionModelState(ModelState):
         self.aligned = self.policy.aligned
         self.causal_commit = self.policy.causal_commit
         self.causal_prefill = self.policy.causal_prefill
-        self.prune = getattr(hf_config, "prune_committed", False)
-        self.prune_refresh = getattr(hf_config, "prune_refresh", 0)
+        pruner = getattr(hf_config, "pruner", None)
         hidden_size = self.policy.hidden_size
-        if self.prune and hidden_size is not None:
-            raise ValueError("prune_committed does not support self-conditioning policies.")
+        if pruner is not None and hidden_size is not None:
+            raise ValueError("Row pruning does not support self-conditioning policies.")
         self.state = CanvasState(
             self.max_num_reqs,
             hf_config.canvas_length,
@@ -44,6 +46,11 @@ class BlockDiffusionModelState(ModelState):
             history_length=getattr(hf_config, "max_steps_per_block", 64),
             hidden_size=hidden_size,
         )
+        self.pruning = None
+        if pruner is not None:
+            self.pruning = RowPruning(
+                resolve(PRUNERS, pruner).from_config(hf_config), self.state, self.policy.shifted
+            )
         self.max_blocks = -(-self.max_model_len // hf_config.canvas_length)
         self.num_route_blocks = self.max_num_reqs * self.max_blocks + 1
         self._causal_buf = torch.zeros(self.max_num_reqs, dtype=torch.int32, device=device)
@@ -70,8 +77,7 @@ class BlockDiffusionModelState(ModelState):
             self.max_model_len,
             self.model.compute_logits,
             self.model_config.get_vocab_size(),
-            prune_committed=self.prune,
-            prune_refresh=self.prune_refresh,
+            pruning=self.pruning,
         ), None
 
     def compute_sample_logits(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -99,18 +105,16 @@ class BlockDiffusionModelState(ModelState):
 
     def _pruned(self, input_batch) -> torch.Tensor:
         slots = input_batch.idx_mapping[: input_batch.num_reqs]
-        return (self.state.active_len[slots] < self.state.block_length) & (
-            self._num_logits(input_batch) > 0
-        )
+        return self.pruning.pruned(slots, self._num_logits(input_batch))
 
     def _active_offset(self, input_batch) -> torch.Tensor:
-        num_tokens = input_batch.num_tokens
-        block = self.state.block_length
         rows = self._rows(input_batch)
         slots = input_batch.idx_mapping[: input_batch.num_reqs]
-        local = torch.arange(num_tokens, device=self.device) - input_batch.query_start_loc[rows]
-        active = self.state.active[slots][rows, local.clamp(max=block - 1)]
-        return torch.where(self._pruned(input_batch)[rows], active - local, 0)
+        local = (
+            torch.arange(input_batch.num_tokens, device=self.device)
+            - input_batch.query_start_loc[rows]
+        )
+        return self.pruning.offsets(slots, rows, local, self._num_logits(input_batch))
 
     def _set_blocks(self, ids: torch.Tensor) -> None:
         for router in getattr(self.model, "block_routers", ()):
@@ -121,7 +125,7 @@ class BlockDiffusionModelState(ModelState):
         positions = self._positions[: input_batch.num_tokens_after_padding]
         positions.copy_(input_batch.positions[: positions.shape[0]])
         positions[:num_tokens] -= self._token_shift(input_batch)
-        if self.prune:
+        if self.pruning is not None:
             positions[:num_tokens] += self._active_offset(input_batch)
         return positions
 
@@ -203,7 +207,7 @@ class BlockDiffusionModelState(ModelState):
         num_tokens = input_batch.num_tokens
         rows = self._rows(input_batch)
         shifted = self._token_shift(input_batch) > 0
-        if self.prune:
+        if self.pruning is not None:
             shifted |= self._pruned(input_batch)[rows]
         positions = self._positions[:num_tokens]
         for group, table in enumerate(block_tables):
@@ -255,7 +259,7 @@ class BlockDiffusionModelState(ModelState):
         seq_lens = self._seq_lens[:num_reqs]
         seq_lens.copy_(input_batch.seq_lens[:num_reqs])
         seq_lens[:actual] -= self.state.shift[slots].to(seq_lens.dtype)
-        if self.prune and not for_capture:
+        if self.pruning is not None and not for_capture:
             extra = self.state.width[slots] - self._num_logits(input_batch)
             seq_lens[:actual] += torch.where(self._pruned(input_batch), extra, 0).to(
                 seq_lens.dtype
