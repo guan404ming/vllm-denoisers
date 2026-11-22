@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import torch
 
-from denoisers.canvas.rows import CanvasRows
+from denoisers.canvas.rows import CanvasRows, StepResult
 from denoisers.ops.capped_stats import capped_row_stats, softcap
 from denoisers.ops.embedding import ExpectedEmbedding
 from denoisers.policies.decode.interface import DecodePolicy, registry
@@ -45,8 +45,10 @@ class EntropyBound(DecodePolicy):
         embedding: ExpectedEmbedding,
         sparse: bool = False,
         softcap: float | None = None,
+        history_length: int = 2,
     ):
         self.vocab_size = vocab_size
+        self.history_length = history_length
         self.max_steps = max_steps
         self.t_min = t_min
         self.t_max = t_max
@@ -72,6 +74,7 @@ class EntropyBound(DecodePolicy):
                 embed, get_tensor_model_parallel_world_size(), model.model.normalizer
             ),
             sparse=config.sparse_self_conditioning,
+            history_length=config.stability_threshold + 1,
             softcap=model.final_logit_softcapping,
         )
 
@@ -130,7 +133,7 @@ class EntropyBound(DecodePolicy):
     def logprob_logits(self, logits: torch.Tensor) -> torch.Tensor:
         return softcap(logits, self.softcap)
 
-    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, torch.Tensor]:
+    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, StepResult]:
         n, block, vocab = logits.shape
         device = logits.device
         bound = self.slot_steps is not None and rows.slots is not None
@@ -170,10 +173,8 @@ class EntropyBound(DecodePolicy):
             history=history,
             history_len=history_len,
             soft=soft.float(),
-            entropy=entropy,
-            emit=emit,
         )
-        return after, converged
+        return after, StepResult(converged, emit=emit, entropy=entropy)
 
     def probe_score(
         self, entropy: torch.Tensor, before: CanvasRows, after: CanvasRows

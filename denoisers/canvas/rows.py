@@ -1,4 +1,4 @@
-from dataclasses import dataclass, fields, replace
+from dataclasses import dataclass
 
 import torch
 
@@ -11,20 +11,18 @@ class CanvasRows:
     shift: torch.Tensor
     width: torch.Tensor
     post_steps: torch.Tensor
-    history: torch.Tensor
-    history_len: torch.Tensor
     committing: torch.Tensor
+    history: torch.Tensor | None = None
+    history_len: torch.Tensor | None = None
     soft: torch.Tensor | None = None
-    entropy: torch.Tensor | None = None
     slots: torch.Tensor | None = None
-    emit: torch.Tensor | None = None
     salt: torch.Tensor | None = None
     stops: torch.Tensor | None = None
     start: torch.Tensor | None = None
 
 
-def select(rows: CanvasRows, index: torch.Tensor | None) -> CanvasRows:
-    if index is None:
-        return rows
-    values = {f.name: getattr(rows, f.name) for f in fields(rows)}
-    return replace(rows, **{k: v[index] for k, v in values.items() if v is not None})
+@dataclass
+class StepResult:
+    done: torch.Tensor
+    emit: torch.Tensor | None = None
+    entropy: torch.Tensor | None = None

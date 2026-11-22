@@ -43,7 +43,6 @@ class BlockDiffusionModelState(ModelState):
             hf_config.canvas_length,
             hf_config.mask_token_id,
             device,
-            history_length=getattr(hf_config, "max_steps_per_block", 64),
             hidden_size=hidden_size,
         )
         self.decoders = Decoders(

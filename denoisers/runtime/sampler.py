@@ -11,7 +11,6 @@ from vllm.v1.worker.gpu.sample.logprob import compute_topk_scores
 from vllm.v1.worker.gpu.sample.output import SamplerOutput
 from vllm.v1.worker.gpu.sample.penalties import use_penalty
 
-from denoisers.canvas.rows import select
 from denoisers.canvas.state import CanvasState
 from denoisers.canvas.transition import advance
 from denoisers.ops.sampling import exclude_filtered_mask
@@ -161,7 +160,7 @@ class BlockDiffusionSampler:
         return logits
 
     def _logits(
-        self, hidden, before, slots, slots_np, widths, widths_np, full
+        self, hidden, slots, slots_np, widths, widths_np, full
     ) -> tuple[torch.Tensor, torch.Tensor]:
         block = self.state.block_length
         n = len(widths_np)
@@ -178,7 +177,7 @@ class BlockDiffusionSampler:
         if full:
             need, count = valid, int(widths_np.sum())
         else:
-            need = valid & (before.canvas == self.state.mask_id)
+            need = valid & (self.state.canvas[slots] == self.state.mask_id)
             count = int(self._need_host[slots_np].sum())
         pos = torch.argsort((~need).view(-1).to(torch.int8), stable=True)[:count]
         index = inv.view(-1)[pos].clamp(min=0)
@@ -252,8 +251,8 @@ class BlockDiffusionSampler:
             group_np = rows_np if index is None else rows_np[index]
             rows = async_tensor_h2d(group_np, device=device)
             slots = input_batch.idx_mapping[: input_batch.num_reqs][rows]
-            before = state.gather(slots)
-            after, row_sampled, row_num_sampled = advance(before, None, policy, state.mask_id)
+            before = state.gather(slots, policy.history_length)
+            after, row_sampled, row_num_sampled, _ = advance(before, None, policy, state.mask_id)
             state.scatter(slots, after)
             if self.probe is not None:
                 ids = [input_batch.req_ids[i] for i in group_np]
@@ -272,7 +271,6 @@ class BlockDiffusionSampler:
         rows_np,
         rows,
         slots,
-        before,
         logits,
         have,
         sampled,
@@ -282,13 +280,15 @@ class BlockDiffusionSampler:
         state = self.state
         block = state.block_length
         slots_np = input_batch.idx_mapping_np[rows_np]
-        after, row_sampled, row_num_sampled = advance(before, logits, policy, state.mask_id)
+        before = state.gather(slots, policy.history_length)
+        after, row_sampled, row_num_sampled, entropy = advance(
+            before, logits, policy, state.mask_id
+        )
         if self.inputs is not None:
             after.soft = self.inputs.soft(logits, have, before, after)
         state.scatter(slots, after)
         self._need[slots] = (after.canvas == state.mask_id).sum(1, dtype=torch.int32)
         if self.probe is not None:
-            entropy = after.entropy
             if entropy is None:
                 entropy = row_stats(logits, state.mask_id).entropy
             scores = policy.probe_score(entropy, before, after)
@@ -349,8 +349,7 @@ class BlockDiffusionSampler:
         if partial_np.any():
             partial = async_tensor_h2d(partial_np, device=device)
             state.truncate(slots[partial], widths[partial])
-        before = state.gather(slots)
-        logits, have = self._logits(hidden, before, slots, slots_np, widths, widths_np, full)
+        logits, have = self._logits(hidden, slots, slots_np, widths, widths_np, full)
         parts = []
         for policy, index in self.decoders.groups(slots_np):
             if index is None:
@@ -360,7 +359,6 @@ class BlockDiffusionSampler:
                     rows_np,
                     rows,
                     slots,
-                    before,
                     logits,
                     have,
                     sampled,
@@ -375,7 +373,6 @@ class BlockDiffusionSampler:
                 rows_np[index],
                 rows[group],
                 slots[group],
-                select(before, group),
                 logits[group],
                 have[group],
                 sampled,

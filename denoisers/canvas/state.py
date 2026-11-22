@@ -12,7 +12,6 @@ class CanvasState:
         block_length: int,
         mask_id: int,
         device: torch.device,
-        history_length: int = 64,
         hidden_size: int | None = None,
     ):
         self.block_length = block_length
@@ -28,10 +27,8 @@ class CanvasState:
         self.salt = torch.zeros(max_num_reqs, dtype=torch.int64, device=device)
         self.begun = 0
         self.stops = torch.full((max_num_reqs, STOPS), -1, dtype=torch.int64, device=device)
-        self.history = torch.zeros(
-            (max_num_reqs, history_length, block_length), dtype=torch.int64, device=device
-        )
-        self.history_len = torch.zeros(max_num_reqs, dtype=torch.int64, device=device)
+        self.history = None
+        self.history_len = None
         self.prefilling = torch.zeros(max_num_reqs, dtype=torch.bool, device=device)
         self.committing = torch.zeros(max_num_reqs, dtype=torch.bool, device=device)
         self.active = torch.arange(block_length, device=device).repeat(max_num_reqs, 1)
@@ -52,7 +49,8 @@ class CanvasState:
         self.start[slot] = 0
         self.width[slot] = self.block_length
         self.post_steps[slot] = 0
-        self.history_len[slot] = 0
+        if self.history_len is not None:
+            self.history_len[slot] = 0
         self.prefilling[slot] = True
         self.committing[slot] = False
         self.active[slot] = torch.arange(self.block_length, device=self.active.device)
@@ -82,7 +80,19 @@ class CanvasState:
         self.canvas[slots] = torch.where(beyond, 0, self.canvas[slots])
         self.original[slots] &= ~beyond
 
-    def gather(self, slots: torch.Tensor) -> CanvasRows:
+    def gather(self, slots: torch.Tensor, history_length: int = 0) -> CanvasRows:
+        history = history_len = None
+        if history_length:
+            if self.history is None or history_length > self.history.shape[1]:
+                rows, block = self.canvas.shape
+                expanded = self.canvas.new_zeros((rows, history_length, block))
+                if self.history is None:
+                    self.history_len = self.step.new_zeros((rows,))
+                else:
+                    expanded[:, : self.history.shape[1]] = self.history
+                self.history = expanded
+            history = self.history[slots, :history_length]
+            history_len = self.history_len[slots]
         return CanvasRows(
             canvas=self.canvas[slots],
             original=self.original[slots],
@@ -90,8 +100,8 @@ class CanvasState:
             shift=self.shift[slots],
             width=self.width[slots],
             post_steps=self.post_steps[slots],
-            history=self.history[slots],
-            history_len=self.history_len[slots],
+            history=history,
+            history_len=history_len,
             committing=self.committing[slots],
             soft=None if self.soft is None else self.soft[slots],
             slots=slots,
@@ -107,8 +117,9 @@ class CanvasState:
         self.shift[slots] = rows.shift
         self.width[slots] = rows.width
         self.post_steps[slots] = rows.post_steps
-        self.history[slots] = rows.history
-        self.history_len[slots] = rows.history_len
+        if rows.history is not None:
+            self.history[slots, : rows.history.shape[1]] = rows.history
+            self.history_len[slots] = rows.history_len
         self.committing[slots] = rows.committing
         self.salt[slots] = rows.salt
         self.start[slots] = rows.start

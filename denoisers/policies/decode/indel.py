@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import torch
 
-from denoisers.canvas.rows import CanvasRows
+from denoisers.canvas.rows import CanvasRows, StepResult
 from denoisers.ops.sampling import given, sample, select_unmask
 from denoisers.ops.stats import row_stats
 from denoisers.policies.decode.interface import DecodePolicy, registry
@@ -50,6 +50,7 @@ class Indel(DecodePolicy):
         max_steps_per_block: int,
         max_resamples: int = 5,
         temperature: float = 0.0,
+        history_length: int | None = None,
     ):
         self.mask_id = mask_id
         self.temperature = temperature
@@ -60,6 +61,9 @@ class Indel(DecodePolicy):
         self.editing_threshold = editing_threshold
         self.max_post_steps = max_post_steps
         self.max_steps_per_block = max_steps_per_block
+        self.history_length = max_steps_per_block if history_length is None else history_length
+        if self.history_length < 1:
+            raise ValueError("Indel needs a positive history_length.")
         self.max_resamples = max_resamples
 
     @classmethod
@@ -74,6 +78,7 @@ class Indel(DecodePolicy):
             editing_threshold=given(config.editing_threshold, 0.0),
             max_post_steps=config.max_post_steps,
             max_steps_per_block=config.max_steps_per_block,
+            history_length=getattr(config, "history_length", None),
         )
 
     def _escape_loops(self, written, before, logits, p0, rows, allowed):
@@ -104,7 +109,7 @@ class Indel(DecodePolicy):
         history[index, history_len % history.shape[1]] = written
         return written, history, history_len + 1
 
-    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, torch.Tensor]:
+    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, StepResult]:
         canvas, original = rows.canvas, rows.original
         block = canvas.shape[1]
         positions = torch.arange(block, device=canvas.device)
@@ -152,4 +157,4 @@ class Indel(DecodePolicy):
             history=history,
             history_len=history_len,
         )
-        return after, done
+        return after, StepResult(done)

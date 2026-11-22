@@ -71,9 +71,9 @@ def test_policy_matches_hf(steps):
     expected = hf_generate(canvas, logits_per_step, steps, 1e-3)
     out = canvas
     for step in range(steps):
-        rows, done = policy(logits_per_step[step], make_rows(out, step=[step]))
+        rows, result = policy(logits_per_step[step], make_rows(out, step=[step]))
         out = rows.canvas
-    assert done.all()
+    assert result.done.all()
     assert torch.equal(out, expected)
 
 
@@ -107,8 +107,8 @@ def test_sampled_policy_reads_only_rows_that_predict_masked_positions():
     canvas[0, :3] = torch.tensor([3, 7, 2])
     logits = torch.randn(1, BLOCK, VOCAB, generator=gen)
     logits[0, [0, 1, BLOCK - 1]] = torch.nan
-    rows, _ = policy(logits, make_rows(canvas, step=[4], shift=[3]))
-    assert torch.isfinite(rows.entropy[0, 3:]).all()
+    rows, result = policy(logits, make_rows(canvas, step=[4], shift=[3]))
+    assert torch.isfinite(result.entropy[0, 3:]).all()
     assert torch.equal(rows.canvas[0, :3], canvas[0, :3])
     assert (rows.canvas[0, 3:] != MASK).all()
 
@@ -119,11 +119,11 @@ def test_dense_scores_keep_entropy_on_every_row():
     canvas = torch.full((1, BLOCK), MASK)
     canvas[0, :3] = torch.tensor([3, 7, 2])
     logits = torch.randn(1, BLOCK, VOCAB, generator=gen)
-    rows, _ = policy(logits, make_rows(canvas, step=[0], shift=[3]))
-    assert (rows.entropy[0, 1:3] == 0).all()
+    rows, result = policy(logits, make_rows(canvas, step=[0], shift=[3]))
+    assert (result.entropy[0, 1:3] == 0).all()
     policy.dense_scores = True
-    rows, _ = policy(logits, make_rows(canvas, step=[0], shift=[3]))
-    assert (rows.entropy[0, 1:3] > 0).all()
+    rows, result = policy(logits, make_rows(canvas, step=[0], shift=[3]))
+    assert (result.entropy[0, 1:3] > 0).all()
 
 
 def test_prompt_tail_shortens_the_schedule():
@@ -138,9 +138,9 @@ def test_prompt_tail_shortens_the_schedule():
     expected = hf_generate(canvas, logits_per_step, steps, 1e-3)
     out = canvas
     for step in range(steps):
-        rows, done = policy(logits_per_step[step], make_rows(out, step=[step], shift=[shift]))
+        rows, result = policy(logits_per_step[step], make_rows(out, step=[step], shift=[shift]))
         out = rows.canvas
-    assert done.all()
+    assert result.done.all()
     assert torch.equal(out, expected)
 
 

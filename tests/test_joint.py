@@ -63,7 +63,7 @@ def test_step_matches_hf(threshold, editing_threshold):
     x0 = probs.argmax(dim=-1)
     p0 = probs.max(dim=-1).values
 
-    after, done = policy(logits, make_rows(canvas, shift=shift, post_steps=post_steps))
+    after, result = policy(logits, make_rows(canvas, shift=shift, post_steps=post_steps))
     out = after.canvas
 
     for r in range(rows):
@@ -73,7 +73,7 @@ def test_step_matches_hf(threshold, editing_threshold):
         assert torch.equal(out[r], expected)
         had_masks = (canvas[r] == MASK).any().item()
         settled = (not edited) or post_steps[r].item() + 1 >= MAX_POST
-        assert done[r].item() == ((not had_masks) and settled)
+        assert result.done[r].item() == ((not had_masks) and settled)
 
 
 def test_prompt_tail_is_never_edited():
@@ -91,10 +91,10 @@ def test_post_steps_cap_ends_block():
     canvas = torch.zeros(1, BLOCK, dtype=torch.int64)
     logits = torch.zeros(1, BLOCK, MASK + 1)
     logits[..., 1] = 10.0
-    _, done = policy(logits, make_rows(canvas, post_steps=[0]))
-    assert not done.item()
-    _, done = policy(logits, make_rows(canvas, post_steps=[MAX_POST - 1]))
-    assert done.item()
+    _, result = policy(logits, make_rows(canvas, post_steps=[0]))
+    assert not result.done.item()
+    _, result = policy(logits, make_rows(canvas, post_steps=[MAX_POST - 1]))
+    assert result.done.item()
 
 
 def test_no_edit_ends_block_immediately():
@@ -102,5 +102,5 @@ def test_no_edit_ends_block_immediately():
     canvas = torch.ones(1, BLOCK, dtype=torch.int64)
     logits = torch.zeros(1, BLOCK, MASK + 1)
     logits[..., 1] = 10.0
-    _, done = policy(logits, make_rows(canvas, post_steps=[0]))
-    assert done.item()
+    _, result = policy(logits, make_rows(canvas, post_steps=[0]))
+    assert result.done.item()

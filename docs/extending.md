@@ -36,7 +36,11 @@ class TopKUnmask(ScoreMovePolicy):
     def move(self, canvas, step, shift, width, tokens, score): ...
 ```
 
-Subclass `DecodePolicy` and implement `__call__(logits, rows)` for a policy that edits the canvas freely. Class attributes declare what the runtime must do: `aligned`, `causal_prefill`, `causal_commit`, `commit_logits`, `sparse_logits`, `shifted`, `stop_exit`. Optional hooks: `bind`, `add_request`, `init_canvas`, `next_seed`, `focus`, `logprob_logits`, `probe_score`. `focus(rows)` returns the cells the policy can unmask next, or `None` for the whole canvas.
+Subclass `DecodePolicy` and implement `__call__(logits, rows)` for a policy that edits the canvas freely. Return `(rows, StepResult(done, emit, entropy))`. Import `StepResult` from `denoisers.canvas.rows`. Only `done` is required.
+
+Set `history_length` on the decoder to request a history window. The runtime allocates it on first use. Indel defaults to its step limit and accepts a separate `history_length` override. DiffusionGemma uses its stability window.
+
+Class attributes declare what the runtime must do: `aligned`, `causal_prefill`, `causal_commit`, `commit_logits`, `sparse_logits`, `shifted`, `stop_exit`. Optional hooks: `bind`, `add_request`, `init_canvas`, `next_seed`, `focus`, `logprob_logits`, `probe_score`. `focus(rows)` returns the cells the policy can unmask next, or `None` for the whole canvas.
 
 A request can pick a registered decode policy:
 

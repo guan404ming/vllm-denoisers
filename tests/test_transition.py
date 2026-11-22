@@ -45,7 +45,7 @@ def test_block_lifecycle_emits_and_aligns(shift):
         logits = torch.randn(1, BLOCK, MASK + 1, generator=gen)
         logits[..., MASK] = -torch.inf
         final = rows.canvas.clone()
-        rows, sampled, num_sampled = advance(rows, logits, policy, MASK)
+        rows, sampled, num_sampled, _ = advance(rows, logits, policy, MASK)
         num_computed += int(num_sampled)
         if num_sampled.item():
             emitted = sampled[0, : int(num_sampled)]
@@ -64,7 +64,7 @@ def test_denoise_rows_do_not_emit():
     rows = make_rows(torch.full((2, BLOCK), MASK), shift=[0, 5])
     logits = torch.randn(2, BLOCK, MASK + 1)
     logits[..., MASK] = -torch.inf
-    after, _, num_sampled = advance(rows, logits, LowConfidence(MASK, BLOCK, BLOCK, 2.0), MASK)
+    after, _, num_sampled, _ = advance(rows, logits, LowConfidence(MASK, BLOCK, BLOCK, 2.0), MASK)
     assert num_sampled.tolist() == [0, 0]
     assert after.step.tolist() == [1, 1]
     assert after.shift.tolist() == [0, 5]
@@ -75,7 +75,9 @@ def test_commit_without_logits_emits_the_canvas():
     canvas = torch.arange(BLOCK).unsqueeze(0)
     rows = make_rows(canvas, mask_id=MASK)
     rows.committing = torch.tensor([True])
-    after, sampled, num_sampled = advance(rows, None, LowConfidence(MASK, BLOCK, BLOCK, 2.0), MASK)
+    after, sampled, num_sampled, _ = advance(
+        rows, None, LowConfidence(MASK, BLOCK, BLOCK, 2.0), MASK
+    )
     assert int(num_sampled) == BLOCK
     assert torch.equal(sampled[0], canvas[0])
     assert (after.canvas == MASK).all() and not after.committing.item()

@@ -3,13 +3,14 @@ from dataclasses import replace
 
 import torch
 
-from denoisers.canvas.rows import CanvasRows
+from denoisers.canvas.rows import CanvasRows, StepResult
 from denoisers.ops.sampling import draws, shift_rows
 from denoisers.registry import Registry
 from denoisers.scheduler.probe import mean_entropy
 
 
 class DecodePolicy(ABC):
+    history_length = 0
     aligned = True
     causal_prefill = True
     causal_commit = False
@@ -25,7 +26,7 @@ class DecodePolicy(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, torch.Tensor]:
+    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, StepResult]:
         raise NotImplementedError
 
     def bind(self, state) -> None:
@@ -74,12 +75,12 @@ class ScoreMovePolicy(DecodePolicy):
     def move(self, canvas, step, shift, width, tokens, score) -> tuple[torch.Tensor, torch.Tensor]:
         raise NotImplementedError
 
-    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, torch.Tensor]:
+    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, StepResult]:
         tokens, score = self.score(logits, draws(rows, self.temperature), self.active(rows))
         if self.shifted:
             tokens, score = shift_rows(tokens), shift_rows(score)
         canvas, done = self.move(rows.canvas, rows.step, rows.shift, rows.width, tokens, score)
-        return replace(rows, canvas=canvas), done
+        return replace(rows, canvas=canvas), StepResult(done)
 
 
 registry = Registry("decode policy", DecodePolicy)

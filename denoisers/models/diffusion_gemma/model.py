@@ -42,7 +42,6 @@ class DiffusionGemmaForBlockDiffusionConfig(VerifyAndUpdateConfig):
         hf_config.max_denoising_steps = given(
             getattr(diffusion, "max_denoising_steps", None), steps
         )
-        hf_config.max_steps_per_block = hf_config.stability_threshold + 1
         hf_config.sparse_self_conditioning = getattr(hf_config, "sparse_self_conditioning", True)
         hf_config.decode_policy = "entropy_bound"
         if not hasattr(hf_config, "input_policy"):
