@@ -1,9 +1,12 @@
 from types import SimpleNamespace
 
+import pytest
 import torch
 from denoisers.canvas.prune import active_rows, inverse_index
 from denoisers.canvas.state import CanvasState
 from denoisers.models.verify import verify_block_diffusion
+from denoisers.pruners import PRUNERS, MaskedRows
+from denoisers.registry import resolve
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 MASK = 9
@@ -80,3 +83,10 @@ def test_prune_turns_off_default_async_scheduling():
     hf_config = SimpleNamespace(decode_policy="low_confidence", canvas_length=BLOCK, pruner="masked")
     verify_block_diffusion(config, hf_config, "test")
     assert scheduler.async_scheduling is False
+
+
+def test_resolve_takes_names_and_qualified_classes():
+    assert resolve(PRUNERS, "masked") is MaskedRows
+    assert resolve(PRUNERS, "denoisers.pruners.masked.MaskedRows") is MaskedRows
+    with pytest.raises(ValueError):
+        resolve(PRUNERS, "unknown")
