@@ -1,25 +1,6 @@
-from dataclasses import dataclass
-
 import torch
 
-
-@dataclass
-class CanvasRows:
-    canvas: torch.Tensor
-    original: torch.Tensor
-    step: torch.Tensor
-    shift: torch.Tensor
-    width: torch.Tensor
-    post_steps: torch.Tensor
-    history: torch.Tensor
-    history_len: torch.Tensor
-    committing: torch.Tensor
-    soft: torch.Tensor | None = None
-    entropy: torch.Tensor | None = None
-    slots: torch.Tensor | None = None
-    emit: torch.Tensor | None = None
-    salt: torch.Tensor | None = None
-    stops: torch.Tensor | None = None
+from denoisers.canvas.rows import CanvasRows
 
 
 def final_prefix(
@@ -32,9 +13,7 @@ def final_prefix(
     return (wall & stop).gather(1, first).squeeze(1)
 
 
-def fresh_rows(
-    rows: CanvasRows, mask_id: int, policy, logits: torch.Tensor
-) -> CanvasRows:
+def fresh_rows(rows: CanvasRows, mask_id: int, policy, logits: torch.Tensor) -> CanvasRows:
     canvas = policy.init_canvas(torch.full_like(rows.canvas, mask_id), rows.slots)
     seed = None if logits is None else policy.next_seed(logits)
     if seed is not None:
@@ -53,6 +32,7 @@ def fresh_rows(
         slots=rows.slots,
         salt=None if rows.salt is None else rows.salt + 1,
         stops=rows.stops,
+        start=None if rows.start is None else rows.start + rows.width,
     )
 
 
@@ -93,10 +73,11 @@ def advance(
         history=_select(committing, fresh.history, after.history),
         history_len=_select(committing, fresh.history_len, after.history_len),
         committing=~committing & done,
-        soft=None if after.soft is None else _select(committing, fresh.soft, after.soft),
+        soft=None if fresh.soft is None else _select(committing, fresh.soft, after.soft),
         entropy=after.entropy,
         slots=rows.slots,
         salt=None if rows.salt is None else _select(committing, fresh.salt, rows.salt),
         stops=rows.stops,
+        start=None if rows.start is None else _select(committing, fresh.start, rows.start),
     )
     return result, sampled, num_sampled

@@ -3,16 +3,14 @@ from vllm.model_executor.models.config import VerifyAndUpdateConfig
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 from denoisers.models.config import DecodeConfig
-from denoisers.policies import POLICIES
-from denoisers.pruners import PRUNERS
-from denoisers.registry import resolve
+from denoisers.policies import decode, inputs, kv
 from denoisers.scheduler.probe import uses_denoisers_scheduler
 
 BACKENDS = (AttentionBackendEnum.TRITON_ATTN, AttentionBackendEnum.FLASH_ATTN)
 
 
 def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
-    policy = resolve(POLICIES, hf_config.decode_policy)
+    policy = decode.registry.resolve(hf_config.decode_policy)
     if getattr(hf_config, "max_post_steps", 1) < 1:
         raise ValueError("max_post_steps must be at least 1.")
     if vllm_config.diffusion_config is None:
@@ -29,8 +27,10 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
     cache = vllm_config.cache_config
     canvas = hf_config.canvas_length
     aligned = policy.aligned
-    if aligned and cache.enable_prefix_caching and (
-        cache.block_size % canvas or (cache.prefix_match_unit or 0) % canvas
+    if (
+        aligned
+        and cache.enable_prefix_caching
+        and (cache.block_size % canvas or (cache.prefix_match_unit or 0) % canvas)
     ):
         raise ValueError(
             f"{name} prefix caching needs --block-size (and any --prefix-match-unit) "
@@ -41,10 +41,12 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
             f"{name} needs --no-enable-chunked-prefill, or a denoisers scheduler-cls "
             "that aligns prefill chunks to the canvas."
         )
-    if getattr(hf_config, "pruner", None) is not None:
-        resolve(PRUNERS, hf_config.pruner)
+    if getattr(hf_config, "input_policy", None) is not None:
+        inputs.registry.resolve(hf_config.input_policy)
+    if getattr(hf_config, "kv_policy", None) is not None:
+        kv.registry.resolve(hf_config.kv_policy)
         if scheduler.async_scheduling:
-            raise ValueError(f"{name} pruner needs --no-async-scheduling.")
+            raise ValueError(f"{name} kv_policy needs --no-async-scheduling.")
         scheduler.async_scheduling = False
     if vllm_config.attention_config.backend not in BACKENDS:
         raise ValueError(f"{name} needs --attention-backend TRITON_ATTN or FLASH_ATTN.")

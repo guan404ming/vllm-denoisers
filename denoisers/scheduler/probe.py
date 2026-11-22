@@ -8,6 +8,7 @@ import torch
 
 ROW = np.dtype([("key", np.uint64), ("score", np.float32)])
 
+
 def scheduler_name(scheduler_config) -> str:
     cls = scheduler_config.scheduler_cls
     return cls if isinstance(cls, str) else f"{cls.__module__}.{cls.__name__}"

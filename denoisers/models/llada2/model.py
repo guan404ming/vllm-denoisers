@@ -42,3 +42,6 @@ class LLaDA2MoeModelLM(BlockDiffusionModel, BailingMoeV2ForCausalLM):
                     renormalize=False,
                 )
                 self.block_routers.append(router)
+
+    def input_embedding(self):
+        return self.model.word_embeddings

@@ -2,14 +2,14 @@
 
 ## Common flags
 
-- `--attention-backend`: `TRITON_ATTN` works on stock vLLM. `FLASH_ATTN` (Hopper and newer) needs [patches/vllm-0.33.0rc1.dev487-flash-block-ranges.patch](../patches/vllm-0.33.0rc1.dev487-flash-block-ranges.patch); stock vLLM drops the prefill block ranges under a per-request causal mask and runs prefill as plain causal (LLaDA2.0-mini GSM8K 91.9% to 87.9%).
+- `--attention-backend`: `TRITON_ATTN` works on stock vLLM. `FLASH_ATTN` (Hopper and newer) needs [denoisers/patches/vllm-0.33.0rc1.dev487-flash-block-ranges.patch](../denoisers/patches/vllm-0.33.0rc1.dev487-flash-block-ranges.patch); stock vLLM drops the prefill block ranges under a per-request causal mask and runs prefill as plain causal (LLaDA2.0-mini GSM8K 91.9% to 87.9%).
 - `--block-size`: a multiple of the canvas (32 for LLaDA2, 4 for SDAR) so prefix caching works.
 - `--no-enable-chunked-prefill`, unless a denoisers scheduler is used.
 - `--generation-config vllm`: when `generation_config.json` sets a temperature. vLLM rejects diffusion requests whose temperature is not 1.0.
 - `--quantization fp8_per_tensor`: about +30% on dense SDAR at canvas 32, same GSM8K score.
 - `--compilation-config '{"max_cudagraph_capture_size": N}'` with N at least `max_num_seqs * canvas_length`: a step forwards batch times canvas tokens, so past vLLM's default of 512 it runs eagerly. Small models gain most.
 - `--hf-overrides '{"fp8_lm_head": true}'`: fp8 LM head on Ada and newer. +7% on SDAR-8B at canvas 4, no gain on LLaDA2.0-mini. On by default for DiffusionGemma.
-- `--hf-overrides '{"pruner": "masked"}'`: turns off async scheduling, which every other configuration keeps on by default (+24% on SDAR-8B at batch 32). A denoise step forwards only the positions that were still masked at the previous step; committed positions keep their cached K/V until the commit step recomputes the block. `prune_refresh: N` recomputes the whole block every N steps. LLaDA-8B commits left to right and works with `prune_refresh: 32`; Dream commits anywhere in the canvas and needs `prune_refresh: 8`. Not for self-conditioning policies. See [results.md](results.md).
+- `--hf-overrides '{"kv_policy": "masked"}'`: turns off async scheduling, which every other configuration keeps on by default (+24% on SDAR-8B at batch 32). A denoise step forwards only the positions that were still masked at the previous step; committed positions keep their cached K/V until the commit step recomputes the block. `kv_refresh: N` recomputes the whole block every N steps. LLaDA-8B commits left to right and works with `kv_refresh: 32`; Dream commits anywhere in the canvas and needs `kv_refresh: 8`. `"kv_policy": "window"` forwards only the current sub-block of `llada` and `fast_dllm`; see [extending.md](extending.md) and [results.md](results.md).
 
 ## LLaDA2 (BailingMoeV2)
 
@@ -50,4 +50,4 @@
 
 ## Decode knobs
 
-`--hf-overrides` accepts `decode_policy`, `temperature`, `top_p` (Dream), `denoise_steps`, `confidence_threshold`, `editing_threshold`, `max_post_steps`, `max_steps_per_block`, `sub_block_length`, `pruner`, `prune_refresh`. `decode_policy` and `pruner` also take a qualified class name; see [extending.md](extending.md).
+`--hf-overrides` accepts `decode_policy`, `temperature`, `top_p` (Dream), `denoise_steps`, `confidence_threshold`, `editing_threshold`, `max_post_steps`, `max_steps_per_block`, `sub_block_length`, `kv_policy`, `kv_refresh`, `prefix_look`, `after_look`, `input_policy`, `smooth_weight`, `smooth_initial`, `smooth_growth`. The policy keys also take a qualified class name; see [extending.md](extending.md).

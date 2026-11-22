@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
-from denoisers.policies import POLICIES
+from denoisers.policies.decode import registry
 
 CONFIG = {
     "architectures": ["SDARForCausalLM"],
@@ -36,7 +36,7 @@ def test_checkpoint_config_gets_canvas_defaults(tmp_path: Path):
     assert cfg.hidden_size == 2048 and cfg.num_key_value_heads == 8
     cfg.update({"canvas_length": 32})
     cfg.denoise_steps = cfg.canvas_length
-    policy = POLICIES[cfg.decode_policy].from_config(cfg, None)
+    policy = registry.resolve(cfg.decode_policy).from_config(cfg, None)
     assert policy.threshold == 0.85
     assert len(policy.schedule) == 32
 

@@ -1,6 +1,6 @@
 import torch
 
-from denoisers.canvas.transition import CanvasRows
+from denoisers.canvas.rows import CanvasRows
 
 STOPS = 8
 
@@ -22,6 +22,7 @@ class CanvasState:
         self.original = torch.ones(shape, dtype=torch.bool, device=device)
         self.step = torch.zeros(max_num_reqs, dtype=torch.int64, device=device)
         self.shift = torch.zeros(max_num_reqs, dtype=torch.int64, device=device)
+        self.start = torch.zeros(max_num_reqs, dtype=torch.int64, device=device)
         self.width = torch.full((max_num_reqs,), block_length, dtype=torch.int64, device=device)
         self.post_steps = torch.zeros(max_num_reqs, dtype=torch.int64, device=device)
         self.salt = torch.zeros(max_num_reqs, dtype=torch.int64, device=device)
@@ -48,6 +49,7 @@ class CanvasState:
         self.original[slot] = True
         self.step[slot] = 0
         self.shift[slot] = 0
+        self.start[slot] = 0
         self.width[slot] = self.block_length
         self.post_steps[slot] = 0
         self.history_len[slot] = 0
@@ -63,12 +65,13 @@ class CanvasState:
         self.stops[slot] = -1
         self.stops[slot, : len(ids)] = torch.tensor(ids, dtype=torch.int64)
 
-    def begin(self, slot: int, prompt_tail: torch.Tensor) -> None:
+    def begin(self, slot: int, prompt_tail: torch.Tensor, start: int) -> None:
         self.reset(slot)
         shift = prompt_tail.numel()
         self.canvas[slot, :shift] = prompt_tail
         self.original[slot, :shift] = False
         self.shift[slot] = shift
+        self.start[slot] = start
         self.prefilling[slot] = False
         self.begun += 1
         self.salt[slot] = self.begun << 20
@@ -94,6 +97,7 @@ class CanvasState:
             slots=slots,
             salt=self.salt[slots],
             stops=self.stops[slots],
+            start=self.start[slots],
         )
 
     def scatter(self, slots: torch.Tensor, rows: CanvasRows) -> None:
@@ -107,5 +111,6 @@ class CanvasState:
         self.history_len[slots] = rows.history_len
         self.committing[slots] = rows.committing
         self.salt[slots] = rows.salt
+        self.start[slots] = rows.start
         if self.soft is not None:
             self.soft[slots] = rows.soft

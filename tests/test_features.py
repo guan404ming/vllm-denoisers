@@ -1,11 +1,12 @@
 import torch
-from denoisers.canvas.batch import aligned_prefill_chunk
+from support import make_rows
+
 from denoisers.canvas.state import CanvasState
 from denoisers.canvas.transition import advance
-from denoisers.policies.indel import Indel
-from denoisers.policies.sampling import sample
-from denoisers.policies.threshold import LowConfidence
-from support import make_rows
+from denoisers.ops.sampling import sample
+from denoisers.policies.decode.indel import Indel
+from denoisers.policies.decode.low_confidence import LowConfidence
+from denoisers.runtime.batch import aligned_prefill_chunk
 
 MASK = 9
 BLOCK = 8
@@ -27,8 +28,8 @@ def test_sample_with_temperature_draws_but_never_the_mask():
 
 def test_truncated_canvas_emits_only_valid_positions():
     state = CanvasState(2, BLOCK, MASK, torch.device("cpu"))
-    state.begin(0, torch.tensor([1, 2]))
-    state.begin(1, torch.tensor([4]))
+    state.begin(0, torch.tensor([1, 2]), 0)
+    state.begin(1, torch.tensor([4]), 0)
     state.truncate(torch.tensor([0]), torch.tensor([5], dtype=torch.int32))
     assert state.width.tolist() == [5, BLOCK]
     assert (state.canvas[0, 5:] == 0).all() and not state.original[0, 5:].any()
@@ -72,4 +73,6 @@ def test_truncated_block_blocks_indel_edit_ops():
     policy = Indel(MASK, delete, split, 1, 0.0, 0.0, 4, 60)
     after, _ = policy(logits, rows)
     assert (after.canvas[0, 1:5] == 4).all()
-    assert (after.canvas[1, 1:] != delete).all() and after.canvas[1, 1:].tolist() != [4] * (BLOCK - 1)
+    assert (after.canvas[1, 1:] != delete).all() and after.canvas[1, 1:].tolist() != [4] * (
+        BLOCK - 1
+    )

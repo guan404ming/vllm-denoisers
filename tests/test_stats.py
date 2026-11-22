@@ -2,7 +2,14 @@ import math
 
 import pytest
 import torch
-from denoisers.policies.stats import _nucleus_reference, _reference, nucleus_bag, row_stats, sample_stats
+
+from denoisers.ops.stats import (
+    _nucleus_reference,
+    _reference,
+    nucleus_bag,
+    row_stats,
+    sample_stats,
+)
 from denoisers.scheduler import probe
 
 MASK, DELETE, SPLIT = 9, 7, 8
@@ -44,7 +51,9 @@ def test_kernel_matches_reference(dtype):
     for x in (logits, wide):
         active = torch.rand(x.shape[:-1], device="cuda") > 0.3
         got = row_stats(x, MASK, (DELETE, SPLIT), active)
-        ref = _reference(x.reshape(-1, x.shape[-1]), MASK, (DELETE, SPLIT, MASK), active.reshape(-1))
+        ref = _reference(
+            x.reshape(-1, x.shape[-1]), MASK, (DELETE, SPLIT, MASK), active.reshape(-1)
+        )
         assert torch.equal(got.x0.flatten(), ref.x0)
         assert torch.equal(got.alt.flatten(), ref.alt)
         assert torch.allclose(got.p0.flatten(), ref.p0, atol=1e-5)
@@ -71,8 +80,12 @@ def test_sample_kernel_returns_tempered_and_plain_probabilities():
     assert (x0[active] != MASK).all()
     x = logits.float()
     pick = x0.unsqueeze(-1)
-    assert torch.allclose(p0[active], torch.softmax(x / 0.2, -1).gather(-1, pick).squeeze(-1)[active], atol=1e-4)
-    assert torch.allclose(plain[active], torch.softmax(x, -1).gather(-1, pick).squeeze(-1)[active], atol=1e-5)
+    assert torch.allclose(
+        p0[active], torch.softmax(x / 0.2, -1).gather(-1, pick).squeeze(-1)[active], atol=1e-4
+    )
+    assert torch.allclose(
+        plain[active], torch.softmax(x, -1).gather(-1, pick).squeeze(-1)[active], atol=1e-5
+    )
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU")
@@ -96,8 +109,12 @@ def test_nucleus_kernel_matches_reference():
     active = torch.rand(6, 4, device="cuda") > 0.3
     active[0, :2] = True
     ids, probs = nucleus_bag(logits, MASK, 0.1, active)
-    ref_ids, ref_probs = _nucleus_reference(logits.reshape(-1, vocab), MASK, 0.1, active.reshape(-1))
-    got = torch.zeros(24, vocab, device="cuda").scatter_add_(1, ids.reshape(24, -1), probs.reshape(24, -1))
+    ref_ids, ref_probs = _nucleus_reference(
+        logits.reshape(-1, vocab), MASK, 0.1, active.reshape(-1)
+    )
+    got = torch.zeros(24, vocab, device="cuda").scatter_add_(
+        1, ids.reshape(24, -1), probs.reshape(24, -1)
+    )
     ref = torch.zeros(24, vocab, device="cuda").scatter_add_(1, ref_ids, ref_probs)
     assert torch.equal(got > 0, ref > 0)
     assert torch.allclose(got, ref, atol=1e-5)

@@ -4,24 +4,21 @@ import time
 from vllm.logger import init_logger
 from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
 
-from denoisers.canvas.batch import aligned_prefill_chunk
+from denoisers.policies.hold import PRIOR, registry
+from denoisers.runtime.batch import aligned_prefill_chunk
 from denoisers.scheduler import probe
-from denoisers.scheduler.policy import PRIOR, held
 
 logger = init_logger("vllm.denoisers")
 
-POLICY = os.environ.get("DENOISERS_POLICY", "sjf")
+HOLD = os.environ.get("DENOISERS_HOLD", "sjf")
 ACTIVE = int(os.environ.get("DENOISERS_ACTIVE", "16"))
-AGE_S = float(os.environ.get("DENOISERS_AGE_S", "0"))
-
-if POLICY == "aging" and AGE_S <= 0:
-    raise ValueError("DENOISERS_POLICY=aging needs DENOISERS_AGE_S > 0.")
 
 
 class _Denoisers:
     def __init__(self, vllm_config, *args, **kwargs):
         super().__init__(vllm_config, *args, **kwargs)
         self.need_mamba_block_aligned_split = True
+        self.hold = registry.resolve(HOLD).from_env()
         self.scores = probe.ScoreTable(
             probe.table_path(vllm_config), vllm_config.scheduler_config.max_num_seqs
         )
@@ -33,17 +30,10 @@ class _Denoisers:
         )
 
     def schedule(self, throttle_prefills=False):
-        decode = [
-            r for r in self.running if r.num_computed_tokens >= r.num_prompt_tokens
-        ]
+        decode = [r for r in self.running if r.num_computed_tokens >= r.num_prompt_tokens]
         scores = self.scores.read([r.request_id for r in decode])
-        hold = held(
-            [(r.request_id, r.arrival_time) for r in decode],
-            time.time(),
-            POLICY,
-            ACTIVE,
-            AGE_S,
-            scores,
+        hold = self.hold.held(
+            [(r.request_id, r.arrival_time) for r in decode], time.time(), ACTIVE, scores
         )
         for r in decode:
             if r.request_id in hold:
@@ -53,8 +43,8 @@ class _Denoisers:
         if self.current_step % 50 == 0 and decode:
             ranked = [scores.get(r.request_id, PRIOR) for r in decode]
             logger.info(
-                "denoisers: policy=%s step=%d decode=%d held=%d scored=%d score=%.2f/%.2f",
-                POLICY,
+                "denoisers: hold=%s step=%d decode=%d held=%d scored=%d score=%.2f/%.2f",
+                HOLD,
                 self.current_step,
                 len(decode),
                 len(hold),

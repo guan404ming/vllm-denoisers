@@ -1,6 +1,7 @@
 import torch
-from denoisers.policies.llada import LLaDA
 from support import make_rows
+
+from denoisers.policies.decode.llada import LLaDA
 
 MASK = 15
 VOCAB = 16

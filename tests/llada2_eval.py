@@ -57,9 +57,7 @@ ref_image = modal.Image.debian_slim(python_version="3.12").pip_install(
 vllm_image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install(NIGHTLY_WHEEL)
-    .add_local_dir(
-        str(PLUGIN_DIR), "/root/plugin", copy=True, ignore=[".venv", "**/__pycache__"]
-    )
+    .add_local_dir(str(PLUGIN_DIR), "/root/plugin", copy=True, ignore=[".venv", "**/__pycache__"])
     .run_commands("pip install --no-deps /root/plugin")
     .env({"VLLM_ALLREDUCE_USE_FLASHINFER": "0"})
 )
@@ -130,9 +128,8 @@ def vllm_generate(
     engine: dict | None = None,
     sampling: dict | None = None,
 ) -> list[dict]:
-    from vllm.inputs import TokensPrompt
-
     from vllm import LLM, SamplingParams
+    from vllm.inputs import TokensPrompt
 
     args = {
         "enforce_eager": True,
@@ -218,7 +215,10 @@ def show(ref: list[dict], got: list[dict]) -> int:
     exact = 0
     for i, g in enumerate(got):
         have = g["tokens"]
-        print(f"prompt_len={len(g['prompt_ids'])} shift={len(g['prompt_ids']) % 32} got={len(have)}", end="")
+        print(
+            f"prompt_len={len(g['prompt_ids'])} shift={len(g['prompt_ids']) % 32} got={len(have)}",
+            end="",
+        )
         if i < len(ref):
             want = ref[i]["tokens"]
             prefix = next(
@@ -251,9 +251,7 @@ def parity(
     tp: int = 1,
     cache_dir: str = "/tmp/denoisers-eval",
 ):
-    ref, got = run_both(
-        "parity", model, policy, PROMPTS, 64, cache_dir, n_ref, active, canvas, tp
-    )
+    ref, got = run_both("parity", model, policy, PROMPTS, 64, cache_dir, n_ref, active, canvas, tp)
     exact = show(ref, got)
     print(f"exact {exact}/{len(ref)}")
 
@@ -332,4 +330,6 @@ def features(
             same = sum(r["tokens"] == g["tokens"] for r, g in zip(reference, got))
             print(f"  same as eager TRITON_ATTN: {same}/{len(got)}")
         for g in got:
-            print(f"  len={len(g['tokens'])} logprobs={g['logprobs'] and g['logprobs'][:3]} {g['text'][:90]!r}")
+            print(
+                f"  len={len(g['tokens'])} logprobs={g['logprobs'] and g['logprobs'][:3]} {g['text'][:90]!r}"
+            )

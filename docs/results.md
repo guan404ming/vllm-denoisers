@@ -45,7 +45,7 @@ SDAR-1.7B at canvas 32 with `max_cudagraph_capture_size` 4096 instead of 512: 37
 
 Throughput: batch 32 or 128 essay prompts x 256 output tokens with `ignore_eos`, `--no-async-scheduling`.
 
-| Model | `prune_refresh` | tok/s batch 32 / 128 | GSM8K |
+| Model | `kv_refresh` | tok/s batch 32 / 128 | GSM8K |
 |---|---|---|---|
 | SDAR-1.7B, canvas 32 | off | 1976 / 4346 | |
 | SDAR-1.7B, canvas 32 | never | 2341 / 5507 | |

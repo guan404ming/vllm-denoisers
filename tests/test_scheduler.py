@@ -1,8 +1,10 @@
 import math
 
+import pytest
 import torch
+
+from denoisers.policies.hold import Aging, RandomOrder, ShortestFirst, registry
 from denoisers.scheduler import probe
-from denoisers.scheduler.policy import held
 
 
 def test_mean_entropy_counts_only_selected_positions():
@@ -32,17 +34,22 @@ def test_score_table_crosses_processes_and_drops_committing_rows(tmp_path):
 def test_sjf_holds_highest_scores_and_prefers_unscored():
     scores = {"a": 3.0, "b": 1.0, "c": 2.0}
     candidates = [("a", 0.0), ("b", 0.0), ("c", 0.0), ("d", 0.0)]
-    assert held(candidates, 10.0, "sjf", 2, 0.0, scores) == {"a", "c"}
+    assert ShortestFirst().held(candidates, 10.0, 2, scores) == {"a", "c"}
 
 
 def test_aging_lets_old_requests_overtake():
     scores = {"old": 5.0, "new": 1.0}
     candidates = [("old", 0.0), ("new", 9.0)]
-    assert held(candidates, 10.0, "aging", 1, 1.0, scores) == {"new"}
-    assert held(candidates, 10.0, "sjf", 1, 1.0, scores) == {"old"}
+    assert Aging(1.0).held(candidates, 10.0, 1, scores) == {"new"}
+    assert ShortestFirst().held(candidates, 10.0, 1, scores) == {"old"}
 
 
 def test_random_holds_exactly_the_overflow():
     candidates = [(str(i), 0.0) for i in range(6)]
-    assert len(held(candidates, 0.0, "random", 4, 0.0, {})) == 2
+    assert len(RandomOrder().held(candidates, 0.0, 4, {})) == 2
 
+
+def test_hold_registry_resolves_built_ins_and_rejects_bad_aging():
+    assert registry.resolve("sjf") is ShortestFirst
+    with pytest.raises(ValueError):
+        Aging(0.0)

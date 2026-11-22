@@ -1,11 +1,11 @@
 # Resident/active scheduling
 
 ```bash
-DENOISERS_POLICY=sjf DENOISERS_ACTIVE=16 VLLM_PLUGINS=denoisers vllm serve ... \
+DENOISERS_HOLD=sjf DENOISERS_ACTIVE=16 VLLM_PLUGINS=denoisers vllm serve ... \
   --scheduler-cls denoisers.scheduler.resident_active.DenoisersAsyncScheduler
 ```
 
-- `DENOISERS_POLICY`: `sjf`, `random`, or `aging` (with `DENOISERS_AGE_S`).
+- `DENOISERS_HOLD`: `sjf`, `random`, `aging` (with `DENOISERS_AGE_S`), or a hold policy class; see [extending.md](extending.md).
 - `DENOISERS_ACTIVE`: how many decoding requests run per step; the rest wait.
 - The probe scores each request by the mean entropy of its current block. DiffusionGemma uses a step-count predictor on the same entropies.
 - Scores reach the scheduler through a memmap table in the temp dir, keyed by instance id and data-parallel rank. Worker rank 0 writes, the scheduler reads, so tensor-parallel ranks must share one node.

@@ -1,9 +1,10 @@
 import pytest
 import torch
-from denoisers.canvas.transition import advance
-from denoisers.policies.indel import Indel, apply_edits
-from denoisers.policies.sampling import transfer_schedule
 from support import make_rows
+
+from denoisers.canvas.transition import advance
+from denoisers.ops.sampling import transfer_schedule
+from denoisers.policies.decode.indel import Indel, apply_edits
 
 MASK, DELETE, SPLIT = 20, 21, 22
 VOCAB = 23
@@ -81,9 +82,7 @@ def hf_decode_block(x, shift, logits_seq, threshold, editing_threshold):
             if mt2[i] or t2t[i]:
                 blk[i] = x0[i]
         if not final_round and tuple(blk) in seen and blk != old:
-            changed = sorted(
-                (i for i in range(BLOCK) if blk[i] != old[i]), key=lambda i: p0[i]
-            )
+            changed = sorted((i for i in range(BLOCK) if blk[i] != old[i]), key=lambda i: p0[i])
             for i in changed[:5]:
                 blk[i] = greedy(logits[i], {blk[i], MASK})
                 if tuple(blk) not in seen:
@@ -111,9 +110,7 @@ def test_apply_edits_matches_hf(seed):
     original = torch.rand(6, BLOCK, generator=gen) < 0.5
     out, out_original = apply_edits(block, old, original, MASK, DELETE, SPLIT)
     for r in range(6):
-        tokens, tracking = hf_apply_edits(
-            block[r].tolist(), old[r].tolist(), original[r].tolist()
-        )
+        tokens, tracking = hf_apply_edits(block[r].tolist(), old[r].tolist(), original[r].tolist())
         assert out[r].tolist() == tokens
         assert out_original[r].tolist() == tracking
 

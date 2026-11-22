@@ -2,15 +2,17 @@ import math
 
 import pytest
 import torch
+from support import make_rows
+
 from denoisers.canvas.transition import advance
-from denoisers.policies.capped_stats import (
+from denoisers.ops.capped_stats import (
     capped_row_stats,
     capped_row_stats_reference,
     select_candidates,
     softcap,
 )
-from denoisers.policies.entropy_bound import COEF, EntropyBound, remaining_steps
-from support import make_rows
+from denoisers.ops.embedding import ExpectedEmbedding
+from denoisers.policies.decode.entropy_bound import COEF, EntropyBound, remaining_steps
 
 VOCAB = 16
 BLOCK = 8
@@ -27,9 +29,9 @@ def make_policy(t_min=0.0, t_max=0.0, bound=0.1, confidence=0.5, tp_size=1, cap=
         t_max=t_max,
         entropy_bound=bound,
         confidence_threshold=confidence,
-        embed_weight=torch.randn(VOCAB, HIDDEN, generator=gen),
-        normalizer=torch.tensor(2.0),
-        tp_size=tp_size,
+        embedding=ExpectedEmbedding(
+            torch.randn(VOCAB, HIDDEN, generator=gen), tp_size=tp_size, scale=torch.tensor(2.0)
+        ),
         softcap=cap,
     )
 
@@ -52,11 +54,12 @@ def test_sparse_soft_embeds_match_exact_on_peaked_rows():
     probs[0, 3] = 1.0
     probs[1, [1, 5]] = 0.5
     probs[2, [2, 7, 9]] = torch.tensor([0.6, 0.3, 0.1])
-    exact = policy.soft_embeds(probs)
-    assert torch.allclose(policy.soft_embeds(select_candidates(probs)), exact, atol=1e-5)
-    policy.vocab_start, policy.vocab_end = 4, 8
-    partial = probs[:, 4:8] @ policy.embed_weight[:4] * 2.0
-    assert torch.allclose(policy.soft_embeds(select_candidates(probs)), partial, atol=1e-5)
+    embedding = policy.embedding
+    exact = embedding(probs)
+    assert torch.allclose(embedding(select_candidates(probs)), exact, atol=1e-5)
+    embedding.vocab_start, embedding.vocab_end = 4, 8
+    partial = probs[:, 4:8] @ embedding.weight[:4] * 2.0
+    assert torch.allclose(embedding(select_candidates(probs)), partial, atol=1e-5)
 
 
 def test_remaining_steps_follows_the_fitted_features():
@@ -70,10 +73,6 @@ def test_remaining_steps_follows_the_fitted_features():
     assert remaining_steps(torch.zeros(1, 4), torch.tensor([0])).item() >= 0.5
 
 
-
-
-
-
 def test_converges_when_argmax_is_stable_and_confident():
     policy = make_policy(bound=0.1, confidence=0.5)
     rows = rows_for(policy, n=1)
@@ -85,10 +84,6 @@ def test_converges_when_argmax_is_stable_and_confident():
     assert done.item()
     assert torch.equal(rows.canvas[0], target)
     assert torch.equal(rows.soft[0], torch.zeros(BLOCK, HIDDEN))
-
-
-
-
 
 
 def test_commit_step_reinits_canvas_and_emits_argmax():
@@ -205,8 +200,8 @@ def test_matches_vllm_sample_step(seed):
             states.is_encoder_phase,
             states.confident,
             states.self_conditioning_embeds,
-            policy.embed_weight,
-            policy.normalizer,
+            policy.embedding.weight,
+            policy.embedding.scale,
             states.accepted_canvas_history,
             states.accepted_canvas_history_len,
             states.max_steps,

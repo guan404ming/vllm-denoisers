@@ -1,8 +1,9 @@
 import pytest
 import torch
-from denoisers.policies.sampling import sample, transfer_schedule, unmask
-from denoisers.policies.threshold import LowConfidence
 from support import make_rows
+
+from denoisers.ops.sampling import sample, transfer_schedule, unmask
+from denoisers.policies.decode.low_confidence import LowConfidence
 
 MASK = 9
 BLOCK = 8
@@ -17,9 +18,7 @@ def hf_step(cur_block, x0, x0_p, num_to_transfer, threshold):
     if high_conf_mask.sum().item() >= num_to_transfer:
         transfer_index = high_conf_mask
     else:
-        _, idx = torch.topk(
-            confidence, k=min(num_to_transfer, active_block_mask.sum().item())
-        )
+        _, idx = torch.topk(confidence, k=min(num_to_transfer, active_block_mask.sum().item()))
         transfer_index[idx] = True
     cur_block[transfer_index] = x0[transfer_index]
     return cur_block
