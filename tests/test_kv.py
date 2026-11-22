@@ -73,6 +73,7 @@ def test_inverse_index_skips_prefix_rows():
     assert inv[0].tolist() == [-1, 0, -1, 1, 2, -1, -1, -1]
     assert inv[1].tolist() == [3, 4, 5, 6, 7, 8, 9, 10]
     assert inv[2].tolist() == [-1, 13, -1, 14, -1, -1, -1, -1]
+    assert inv.is_contiguous()
 
 
 def test_state_reset_restores_full_active_rows():
