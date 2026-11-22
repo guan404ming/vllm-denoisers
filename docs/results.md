@@ -41,7 +41,7 @@ GSM8K 5-shot: SDAR-1.7B 79.4%, LLaDA2.0-mini 91.9%, LLaDA2.2-mini 89.3%.
 
 SDAR-1.7B at canvas 32 with `max_cudagraph_capture_size` 4096 instead of 512: 3711 against 1931 tok/s at batch 32, 4516 against 4351 at batch 128, identical outputs.
 
-## Commit-aware pruning
+## KV policy `masked`
 
 Throughput: batch 32 or 128 essay prompts x 256 output tokens with `ignore_eos`, `--no-async-scheduling`.
 
@@ -78,7 +78,7 @@ GSM8K 0-shot, `gen_length` 512, `block_length` 32, 128 steps, temperature 0.2, a
 
 ## Scheduling: step cost and the holding trade-off
 
-Step time per active request (ms), measured with `stepcost.py`:
+Step time per active request (ms):
 
 | Active | DiffusionGemma (canvas 256) | LLaDA2.0-mini (32) | SDAR-8B (4) |
 |---|---|---|---|
@@ -87,7 +87,7 @@ Step time per active request (ms), measured with `stepcost.py`:
 | 64 | 4.15 | 0.53 | 0.18 |
 | 256 | | 0.22 | 0.15 |
 
-Holding a request never removes its work, so throughput depends only on per-step efficiency, and the curves keep falling with batch size. A cost-aware budget that holds only beyond the knee (`DENOISERS_EPS` 2%) gave DiffusionGemma +5 pt SLO20 at -2% throughput on 128 requests; a pure value-density ratio collapsed throughput to 1150 tok/s; on SDAR-8B with 960 requests the budget policy lost 12% throughput and SLO. SJF with 16 active remains the strongest SLO setting (+15 pt SLO20 at -12% throughput). The density policy was reverted.
+Holding a request never removes its work, so throughput depends only on per-step efficiency, and the curves keep falling with batch size.
 
 Probe quality (Spearman of the predicted remaining steps against the realized count, 64 requests): DiffusionGemma 0.71 with the refit linear model (mean, median, low fraction, max entropy, step), LLaDA2.0-mini 0.93 from mean block entropy, SDAR-8B 0.63.
 

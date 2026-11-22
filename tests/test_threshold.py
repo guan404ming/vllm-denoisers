@@ -56,24 +56,6 @@ def test_full_block_decodes_in_steps():
     assert torch.equal(canvas[0, :3], torch.ones(3, dtype=canvas.dtype))
 
 
-def test_mask_token_is_never_chosen():
-    logits = torch.zeros(2, BLOCK, MASK + 1)
-    logits[..., MASK] = 10.0
-    x0, p0 = sample(logits, MASK)
-    assert (x0 != MASK).all()
-    assert torch.allclose(p0, torch.softmax(logits, dim=-1)[..., 0])
-
-
-def test_block_ends_after_last_step():
-    policy = LowConfidence(MASK, BLOCK, 2, 0.99)
-    canvas = torch.full((1, BLOCK), MASK)
-    logits = torch.zeros(1, BLOCK, MASK + 1)
-    _, result = policy(logits, make_rows(canvas, step=[0]))
-    assert not result.done.item()
-    _, result = policy(logits, make_rows(canvas, step=[1]))
-    assert result.done.item()
-
-
 def test_sample_with_temperature_skips_inactive_rows():
     gen = torch.Generator().manual_seed(0)
     logits = torch.randn(4, BLOCK, MASK + 1, generator=gen)

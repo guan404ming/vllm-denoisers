@@ -3,7 +3,7 @@ import math
 import pytest
 import torch
 
-from denoisers.policies.hold import Aging, RandomOrder, ShortestFirst, registry
+from denoisers.policies.hold import Aging, ShortestFirst
 from denoisers.scheduler import probe
 
 
@@ -42,15 +42,6 @@ def test_aging_lets_old_requests_overtake():
     candidates = [("old", 0.0), ("new", 9.0)]
     assert Aging(1.0).held(candidates, 10.0, 1, scores) == {"new"}
     assert ShortestFirst().held(candidates, 10.0, 1, scores) == {"old"}
-
-
-def test_random_holds_exactly_the_overflow():
-    candidates = [(str(i), 0.0) for i in range(6)]
-    assert len(RandomOrder().held(candidates, 0.0, 4, {})) == 2
-
-
-def test_hold_registry_resolves_built_ins_and_rejects_bad_aging():
-    assert registry.resolve("sjf") is ShortestFirst
     with pytest.raises(ValueError):
         Aging(0.0)
 

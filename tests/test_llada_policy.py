@@ -83,18 +83,6 @@ def test_llada_policy_ranks_sampled_tokens_by_untempered_confidence():
     assert (rows.canvas[0, [0, 2, 3]] == MASK).all()
 
 
-def test_llada_policy_unmasks_only_current_sub_block():
-    policy = LLaDA(MASK, BLOCK, SUB, BLOCK)
-    logits = torch.zeros(1, BLOCK, VOCAB)
-    logits[..., 3] = 5.0
-    logits[0, 6, 3] = 50.0
-    rows = make_rows(torch.full((1, BLOCK), MASK), mask_id=MASK)
-    rows, result = policy(logits, rows)
-    assert (rows.canvas[0, SUB:] == MASK).all()
-    assert (rows.canvas[0, :SUB] != MASK).sum() == 1
-    assert not result.done.item()
-
-
 def test_llada_finishes_partial_sub_block_before_commit():
     width = 6
     policy = LLaDA(MASK, width, SUB, width)

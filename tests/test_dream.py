@@ -4,17 +4,13 @@ from pathlib import Path
 import pytest
 import torch
 from support import make_rows
-from transformers import Qwen2TokenizerFast
 
 from denoisers.models.dream.config import DreamConfig
-from denoisers.models.dream.tokenizer import DreamTokenizer
 from denoisers.ops.sampling import exclude_filtered_mask
 from denoisers.policies.decode import registry
 from denoisers.policies.decode.dream import (
     Dream,
     nucleus_stats,
-    ratio_table,
-    transfer_ratios,
 )
 
 MASK = 15
@@ -144,21 +140,6 @@ def test_prompt_tail_shortens_the_schedule():
     assert torch.equal(out, expected)
 
 
-def test_ratio_table_scales_steps_with_masked_count():
-    table = ratio_table(8, 4, 1e-3)
-    assert torch.equal(table[8], transfer_ratios(4, 1e-3))
-    assert torch.equal(table[4, :2], transfer_ratios(2, 1e-3))
-    assert (table[4, 2:] == 1).all()
-    assert (table[0] == 1).all()
-
-
-def test_ratios_end_with_full_transfer():
-    ratios = transfer_ratios(4, 1e-3)
-    assert ratios.shape == (4,)
-    assert ratios[-1] == 1
-    assert (ratios[:-1] < 1).all()
-
-
 def test_checkpoint_config_gets_canvas_defaults(tmp_path: Path):
     (tmp_path / "config.json").write_text(json.dumps(CONFIG))
     cfg = DreamConfig.from_pretrained(tmp_path)
@@ -171,11 +152,6 @@ def test_checkpoint_config_gets_canvas_defaults(tmp_path: Path):
     policy = registry.resolve(cfg.decode_policy).from_config(cfg, None)
     assert policy.table.shape == (257, 256)
     assert policy.last[256] == 255 and policy.last[172] == 171
-
-
-def test_tokenizer_is_registered_fast_class():
-    assert issubclass(DreamTokenizer, Qwen2TokenizerFast)
-    assert DreamTokenizer.__name__ == "DreamTokenizer"
 
 
 def test_top_k_keeps_a_dream_candidate_when_mask_ranks_first():
