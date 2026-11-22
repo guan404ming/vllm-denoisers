@@ -297,9 +297,10 @@ class BlockDiffusionSampler:
             )
         if self.kv is not None:
             full = logprob_args is not None or self.decoders.default.dense_scores
-            active = self.kv.update(slots, before, after, full)
+            kv_policy = self.kv.for_decoder(policy)
+            active = self.kv.update(kv_policy, slots, before, after, full)
             self.req_states.draft_tokens[slots, :block] = self.kv.draft_tokens(
-                after, active, self.req_states.all_token_ids.gpu
+                kv_policy, after, active, self.req_states.all_token_ids.gpu
             )
         else:
             self.req_states.draft_tokens[slots, :block] = after.canvas

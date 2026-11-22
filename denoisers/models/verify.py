@@ -4,7 +4,6 @@ from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 from denoisers.models.config import DecodeConfig
 from denoisers.policies import decode, inputs, kv
-from denoisers.scheduler.probe import uses_denoisers_scheduler
 
 BACKENDS = (AttentionBackendEnum.TRITON_ATTN, AttentionBackendEnum.FLASH_ATTN)
 
@@ -36,7 +35,11 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
             f"{name} prefix caching needs --block-size (and any --prefix-match-unit) "
             f"that is a multiple of canvas_length {canvas}."
         )
-    if aligned and scheduler.enable_chunked_prefill and not uses_denoisers_scheduler(scheduler):
+    if (
+        aligned
+        and scheduler.enable_chunked_prefill
+        and not getattr(scheduler.get_scheduler_cls(), "aligns_denoiser_prefill", False)
+    ):
         raise ValueError(
             f"{name} needs --no-enable-chunked-prefill, or a denoisers scheduler-cls "
             "that aligns prefill chunks to the canvas."

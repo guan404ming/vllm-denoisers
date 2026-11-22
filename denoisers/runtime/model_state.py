@@ -52,11 +52,19 @@ class BlockDiffusionModelState(ModelState):
         self.kv = None
         name = getattr(hf_config, "kv_policy", None)
         if name is not None:
-            kv_policy = kv.registry.resolve(name).from_config(hf_config, policy)
-            if kv_policy.refreshes_prefix and vllm_config.cache_config.enable_prefix_caching:
-                raise ValueError("A kv policy that refreshes the prefix needs prefix caching off.")
+            kv_cls = kv.registry.resolve(name)
+
+            def build_kv(decoder):
+                kv_policy = kv_cls.from_config(hf_config, decoder)
+                if kv_policy.refreshes_prefix and vllm_config.cache_config.enable_prefix_caching:
+                    raise ValueError(
+                        "A kv policy that refreshes the prefix needs prefix caching off."
+                    )
+                return kv_policy
+
             refresh = getattr(hf_config, "kv_refresh", 0)
-            self.kv = KvRuntime(kv_policy, self.state, policy.shifted, refresh)
+            self.kv = KvRuntime(build_kv, self.state, policy.shifted, refresh)
+            self.kv.for_decoder(policy)
         self.max_blocks = -(-self.max_model_len // hf_config.canvas_length)
         self.num_route_blocks = self.max_num_reqs * self.max_blocks + 1
         self._causal_buf = torch.zeros(self.max_num_reqs, dtype=torch.int32, device=device)

@@ -42,8 +42,9 @@ def inverse_index(active: torch.Tensor, widths: torch.Tensor, starts: torch.Tens
 
 
 class KvRuntime:
-    def __init__(self, policy, state, shifted: bool, refresh_every: int = 0):
-        self.policy = policy
+    def __init__(self, build_policy, state, shifted: bool, refresh_every: int = 0):
+        self.build_policy = build_policy
+        self.policies = {}
         self.state = state
         self.shifted = shifted
         self.refresh_every = refresh_every
@@ -51,6 +52,12 @@ class KvRuntime:
         pinned = torch.cuda.is_available()
         self.lengths = torch.full((rows,), block, dtype=torch.int32, pin_memory=pinned)
         self.leads = torch.zeros(rows, dtype=torch.int64, pin_memory=pinned)
+
+    def for_decoder(self, decoder):
+        key = id(decoder)
+        if key not in self.policies:
+            self.policies[key] = self.build_policy(decoder)
+        return self.policies[key]
 
     def widths(self, slots_np: np.ndarray) -> np.ndarray:
         return self.lengths.numpy()[slots_np]
@@ -69,26 +76,26 @@ class KvRuntime:
         self.state.active_len[slots] = block
 
     def update(
-        self, slots: torch.Tensor, before: CanvasRows, after: CanvasRows, full: bool
+        self, policy, slots: torch.Tensor, before: CanvasRows, after: CanvasRows, full: bool
     ) -> torch.Tensor:
         cells = torch.arange(self.state.block_length, device=slots.device)
-        keep = self.policy.keep(before, after) & (cells < before.width.unsqueeze(1))
+        keep = policy.keep(before, after) & (cells < before.width.unsqueeze(1))
         forced = after.committing | (after.step == 0)
         if self.refresh_every > 0:
             forced = forced | (after.step % self.refresh_every == 0)
         if full:
             forced = torch.ones_like(forced)
-        prefix = torch.minimum(self.policy.prefix(before, after), after.start)
+        prefix = torch.minimum(policy.prefix(before, after), after.start)
         active, length = layout(keep, before.width, forced, self.shifted, prefix)
         self.state.active[slots] = active
         self.state.active_len[slots] = length.to(torch.int32)
         return active
 
     def draft_tokens(
-        self, after: CanvasRows, active: torch.Tensor, history: torch.Tensor
+        self, policy, after: CanvasRows, active: torch.Tensor, history: torch.Tensor
     ) -> torch.Tensor:
         tokens = after.canvas.gather(1, active.clamp(min=0))
-        if not self.policy.refreshes_prefix:
+        if not policy.refreshes_prefix:
             return tokens
         positions = (after.start.unsqueeze(1) + active).clamp(0, history.shape[1] - 1)
         past = history[after.slots.unsqueeze(1), positions].to(tokens.dtype)

@@ -9,15 +9,6 @@ import torch
 ROW = np.dtype([("key", np.uint64), ("score", np.float32)])
 
 
-def scheduler_name(scheduler_config) -> str:
-    cls = scheduler_config.scheduler_cls
-    return cls if isinstance(cls, str) else f"{cls.__module__}.{cls.__name__}"
-
-
-def uses_denoisers_scheduler(scheduler_config) -> bool:
-    return scheduler_name(scheduler_config).startswith("denoisers.scheduler")
-
-
 def table_path(vllm_config) -> str:
     rank = vllm_config.parallel_config.data_parallel_rank
     return os.path.join(
@@ -105,7 +96,7 @@ class Probe:
 
 
 def uses_probe(scheduler_config) -> bool:
-    return scheduler_name(scheduler_config).startswith("denoisers.scheduler.resident_active")
+    return getattr(scheduler_config.get_scheduler_cls(), "uses_denoiser_scores", False)
 
 
 def start(vllm_config) -> Probe:
