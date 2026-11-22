@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import torch
+from vllm.distributed import get_tp_group
 from vllm.logger import init_logger
 from vllm.utils.torch_utils import async_tensor_h2d
 from vllm.v1.outputs import LogprobsTensors
@@ -13,6 +14,7 @@ from vllm.v1.worker.gpu.sample.penalties import use_penalty
 from denoisers.canvas.rows import select
 from denoisers.canvas.state import CanvasState
 from denoisers.canvas.transition import advance
+from denoisers.ops.sampling import exclude_filtered_mask
 from denoisers.ops.stats import row_stats
 from denoisers.patches import draft_tokens
 from denoisers.policies.inputs import InputPolicy
@@ -108,7 +110,13 @@ class BlockDiffusionSampler:
         if device.type != "cuda":
             return 1 << 30
         free = torch.cuda.mem_get_info(device)[0]
-        return max(self.state.block_length, free // 2 // (self.vocab_size * LOGITS_BYTES))
+        budget = max(self.state.block_length, free // 2 // (self.vocab_size * LOGITS_BYTES))
+        group = get_tp_group()
+        if group.world_size > 1:
+            shared = torch.tensor(budget, device="cpu")
+            torch.distributed.all_reduce(shared, torch.distributed.ReduceOp.MIN, group.cpu_group)
+            budget = int(shared)
+        return budget
 
     def profile_run(self, hidden_states) -> None:
         rows = min(hidden_states.shape[0], self._budget_tokens(hidden_states.device))
@@ -147,7 +155,9 @@ class BlockDiffusionSampler:
             expanded, slots_np, logits.shape[-1]
         )
         if top_k is not None or top_p is not None:
-            logits = apply_top_k_top_p(logits.float(), top_k, top_p, has_topp_only_rows=topp_only)
+            logits = logits.float()
+            exclude_filtered_mask(logits, self.state.mask_id, top_k, top_p)
+            logits = apply_top_k_top_p(logits, top_k, top_p, has_topp_only_rows=topp_only)
         return logits
 
     def _logits(
@@ -286,7 +296,7 @@ class BlockDiffusionSampler:
                 slots_np, [input_batch.req_ids[i] for i in rows_np], scores, before.committing
             )
         if self.kv is not None:
-            full = logprob_args is not None or self.probe is not None
+            full = logprob_args is not None or self.decoders.default.dense_scores
             active = self.kv.update(slots, before, after, full)
             self.req_states.draft_tokens[slots, :block] = self.kv.draft_tokens(
                 after, active, self.req_states.all_token_ids.gpu
@@ -401,7 +411,7 @@ class BlockDiffusionSampler:
         want_logprobs = max_logprobs >= 0 or max_ids > 0
         logprob_args = (max_logprobs, max_ids) if want_logprobs else None
         sparse = self.decoders.all(slots_np, "sparse_logits")
-        full = not sparse or self.probe is not None or want_logprobs
+        full = not sparse or self.decoders.default.dense_scores or want_logprobs
         if 2 * len(rows_np) * block > self._budget:
             self._budget = self._budget_tokens(device)
         per_chunk = max(1, self._budget // block)

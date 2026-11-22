@@ -77,6 +77,7 @@ class Probe:
         self.table = table
         self.pending = None
         self.buffers = [None, None]
+        self.ready = None
 
     def record(
         self, slots, req_ids: list[str], scores: torch.Tensor, committing: torch.Tensor
@@ -84,6 +85,8 @@ class Probe:
         index = 0
         if self.pending is not None:
             prev_slots, prev_ids, prev_buf, prev_index = self.pending
+            if self.ready is not None:
+                self.ready.synchronize()
             self.table.write(prev_slots, prev_ids, prev_buf.tolist())
             index = 1 - prev_index
         values = torch.where(committing, torch.nan, scores.float())
@@ -94,13 +97,17 @@ class Probe:
             )
         buf = buf[: values.numel()]
         buf.copy_(values, non_blocking=True)
+        if values.is_cuda:
+            if self.ready is None:
+                self.ready = torch.cuda.Event()
+            self.ready.record(torch.cuda.current_stream(values.device))
         self.pending = (slots, req_ids, buf, index)
 
 
-def start(vllm_config) -> Probe | None:
-    if not scheduler_name(vllm_config.scheduler_config).startswith(
-        "denoisers.scheduler.resident_active"
-    ):
-        return None
+def uses_probe(scheduler_config) -> bool:
+    return scheduler_name(scheduler_config).startswith("denoisers.scheduler.resident_active")
+
+
+def start(vllm_config) -> Probe:
     capacity = vllm_config.scheduler_config.max_num_seqs
     return Probe(ScoreTable(table_path(vllm_config), capacity, create=True))

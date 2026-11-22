@@ -8,6 +8,7 @@ from transformers import Qwen2TokenizerFast
 
 from denoisers.models.dream.config import DreamConfig
 from denoisers.models.dream.tokenizer import DreamTokenizer
+from denoisers.ops.sampling import exclude_filtered_mask
 from denoisers.policies.decode import registry
 from denoisers.policies.decode.dream import (
     Dream,
@@ -175,3 +176,12 @@ def test_checkpoint_config_gets_canvas_defaults(tmp_path: Path):
 def test_tokenizer_is_registered_fast_class():
     assert issubclass(DreamTokenizer, Qwen2TokenizerFast)
     assert DreamTokenizer.__name__ == "DreamTokenizer"
+
+
+def test_top_k_keeps_a_dream_candidate_when_mask_ranks_first():
+    logits = torch.tensor([[0.0, 1.0, 2.0], [0.0, 1.0, 2.0]])
+    exclude_filtered_mask(logits, 2, torch.tensor([1, 3]), None)
+    assert logits[1, 2] == 2
+    filtered = logits[:1].masked_fill(logits[:1] < logits[0].max(), -torch.inf)
+    token, entropy = nucleus_stats(filtered, 2, 1.0, 1.0)
+    assert token.item() == 1 and entropy.item() == 0

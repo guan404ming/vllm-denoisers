@@ -1,5 +1,9 @@
 from types import SimpleNamespace
 
+import pytest
+
+pytest.importorskip("vllm")
+
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 from denoisers.models.verify import verify_block_diffusion

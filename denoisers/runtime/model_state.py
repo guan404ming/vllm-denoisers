@@ -17,21 +17,19 @@ from denoisers.runtime.sampler import BlockDiffusionSampler
 from denoisers.scheduler import probe
 
 
-def start_probe(vllm_config) -> probe.Probe | None:
-    if get_tensor_model_parallel_rank() == 0:
-        return probe.start(vllm_config)
-    return None
-
-
 class BlockDiffusionModelState(ModelState):
     num_new_sampled_tokens_per_step: int = 0
 
     def __init__(self, vllm_config, model, encoder_cache, device) -> None:
         super().__init__(vllm_config, model, encoder_cache, device)
-        self.probe = start_probe(vllm_config)
         hf_config = self.model_config.hf_config
         policy = model.build_policy()
-        policy.dense_scores = self.probe is not None
+        policy.dense_scores = probe.uses_probe(vllm_config.scheduler_config)
+        self.probe = (
+            probe.start(vllm_config)
+            if policy.dense_scores and get_tensor_model_parallel_rank() == 0
+            else None
+        )
         self.aligned = policy.aligned
         self.causal_commit = policy.causal_commit
         self.causal_prefill = policy.causal_prefill

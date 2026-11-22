@@ -162,3 +162,12 @@ def test_loop_escape_replaces_lowest_confidence_change():
     assert out[0].tolist() == [1, 11, 3, 10, 5, 6, 7, 8]
     assert history[0, 1].tolist() == out[0].tolist()
     assert history_len.item() == 2
+
+
+def test_loop_escape_accepts_canvas_shorter_than_retry_limit():
+    policy = Indel(MASK, DELETE, SPLIT, STEPS, 0.5, 0.0, MAX_POST, MAX_STEPS)
+    rows = make_rows(torch.full((1, 4), MASK), mask_id=MASK)
+    logits = torch.zeros(1, 4, VOCAB)
+    logits[..., 3] = 10.0
+    after, _ = policy(logits, rows)
+    assert after.canvas.tolist() == [[3, 3, 3, 3]]

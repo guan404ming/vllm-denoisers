@@ -53,3 +53,17 @@ def test_hold_registry_resolves_built_ins_and_rejects_bad_aging():
     assert registry.resolve("sjf") is ShortestFirst
     with pytest.raises(ValueError):
         Aging(0.0)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU")
+def test_probe_waits_for_scores_on_the_copy_stream(tmp_path):
+    table = probe.ScoreTable(str(tmp_path / "scores"), 1, create=True)
+    writer = probe.Probe(table)
+    stream = torch.cuda.Stream()
+    with torch.cuda.stream(stream):
+        scores = torch.tensor([2.0], device="cuda")
+        committing = torch.tensor([False], device="cuda")
+        torch.cuda._sleep(20_000_000)
+        writer.record([0], ["first"], scores, committing)
+        writer.record([0], ["second"], scores, committing)
+    assert table.read(["first"]) == {"first": 2.0}

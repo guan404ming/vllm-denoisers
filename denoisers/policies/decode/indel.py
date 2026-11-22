@@ -90,7 +90,7 @@ class Indel(DecodePolicy):
         count = changed.sum(dim=1)
         index = torch.arange(n, device=device)
         active = repeats(written) & allowed
-        for r in range(self.max_resamples):
+        for r in range(min(self.max_resamples, order.shape[1])):
             take = active & (r < count)
             pos = order[:, r]
             row_logits = logits[index, pos].float()
