@@ -5,7 +5,6 @@ from vllm.model_executor.models.diffusion_gemma import (
 )
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
-from denoisers.models.fp8_head import fp8_supported
 from denoisers.models.mixin import BlockDiffusionModel
 from denoisers.models.verify import verify_block_diffusion
 from denoisers.ops.sampling import given
@@ -45,7 +44,6 @@ class DiffusionGemmaForBlockDiffusionConfig(VerifyAndUpdateConfig):
         )
         hf_config.max_steps_per_block = hf_config.stability_threshold + 1
         hf_config.sparse_self_conditioning = getattr(hf_config, "sparse_self_conditioning", True)
-        hf_config.fp8_lm_head = getattr(hf_config, "fp8_lm_head", fp8_supported())
         hf_config.decode_policy = "entropy_bound"
         if not hasattr(hf_config, "input_policy"):
             hf_config.input_policy = "self_conditioning"
