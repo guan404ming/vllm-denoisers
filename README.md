@@ -9,6 +9,7 @@ vLLM plugin for diffusion language models. Install it and vLLM loads it; no fork
 | Fast-dLLM v2 | `Efficient-Large-Model/Fast_dLLM_v2_*` | block diffusion | `fast_dllm` |
 | LLaDA-8B | `GSAI-ML/LLaDA-8B-Instruct` | full attention, decoded per canvas | `llada` |
 | Dream | `Dream-org/Dream-v0-Instruct-7B` | full attention, decoded per canvas | `dream` |
+| Nemotron Labs Sigma | NVIDIA 3B and 8B, base, instruct, distilled, self-speculative | continuous diffusion | [checkpoint sampler](docs/models.md#nemotron-labs-sigma) |
 | DiffusionGemma | `google/diffusiongemma-26B-A4B-it` | uniform noise, self-conditioning | `entropy_bound` |
 
 - Continuous batching, CUDA graphs, prefix caching, tensor parallelism, fp8.

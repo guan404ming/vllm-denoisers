@@ -10,6 +10,7 @@ from denoisers.models.llada.config import LLaDAConfig
 from denoisers.models.llada2.config import LLaDA2MoeConfig
 from denoisers.models.llada2.tokenizer import CustomFastTokenizer
 from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
+from denoisers.models.sigma.config import SigmaModelConfig
 from denoisers.models.verify import BlockDiffusionModelConfig
 
 FAMILIES = (
@@ -45,6 +46,11 @@ def register_family(
 def register_all() -> None:
     for architecture, model, config, tokenizer in FAMILIES:
         register_family(architecture, f"denoisers.models.{model}", config, tokenizer)
+    register_family(
+        "NemotronLabsSigmaModel",
+        "denoisers.models.sigma.model:NemotronLabsSigmaModel",
+        verifier=SigmaModelConfig,
+    )
     register_family(
         "DiffusionGemmaForBlockDiffusion",
         "denoisers.models.diffusion_gemma.model:DiffusionGemma",
