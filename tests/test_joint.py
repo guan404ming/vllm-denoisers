@@ -12,7 +12,7 @@ MAX_POST = 3
 
 def test_explicit_zero_thresholds_survive():
     cfg = SimpleNamespace(mask_token_id=MASK, temperature=0.0, confidence_threshold=0.5, editing_threshold=0.0, max_post_steps=16)
-    policy = JointThreshold.from_config(cfg)
+    policy = JointThreshold.from_config(cfg, None)
     assert policy.threshold == 0.5 and policy.editing_threshold == 0.0
 
 

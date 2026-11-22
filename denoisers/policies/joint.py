@@ -3,10 +3,11 @@ from dataclasses import replace
 import torch
 
 from denoisers.canvas.transition import CanvasRows
+from denoisers.policies.interface import DecodePolicy
 from denoisers.policies.sampling import given, sample, unmask
 
 
-class JointThreshold:
+class JointThreshold(DecodePolicy):
     commit_logits = False
 
     def __init__(
@@ -24,7 +25,7 @@ class JointThreshold:
         self.max_post_steps = max_post_steps
 
     @classmethod
-    def from_config(cls, config) -> "JointThreshold":
+    def from_config(cls, config, model) -> "JointThreshold":
         return cls(
             mask_id=config.mask_token_id,
             temperature=config.temperature,

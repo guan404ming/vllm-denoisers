@@ -3,6 +3,7 @@ from dataclasses import replace
 import torch
 
 from denoisers.canvas.transition import CanvasRows
+from denoisers.policies.interface import DecodePolicy
 from denoisers.policies.sampling import given, sample, select_unmask
 from denoisers.policies.stats import row_stats
 
@@ -33,7 +34,7 @@ def apply_edits(
     return out[:, :width], out_original[:, :width]
 
 
-class Indel:
+class Indel(DecodePolicy):
     commit_logits = False
 
     def __init__(
@@ -61,7 +62,7 @@ class Indel:
         self.max_resamples = max_resamples
 
     @classmethod
-    def from_config(cls, config) -> "Indel":
+    def from_config(cls, config, model) -> "Indel":
         return cls(
             mask_id=config.mask_token_id,
             temperature=config.temperature,

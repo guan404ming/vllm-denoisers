@@ -1,12 +1,10 @@
-from dataclasses import replace
-
 import torch
 
-from denoisers.canvas.transition import CanvasRows
-from denoisers.policies.sampling import draws, given, sample, select_unmask, shift_rows
+from denoisers.policies.interface import ScoreMovePolicy
+from denoisers.policies.sampling import given, sample, select_unmask
 
 
-class FastDLLM:
+class FastDLLM(ScoreMovePolicy):
     shifted = True
 
     def __init__(
@@ -23,7 +21,7 @@ class FastDLLM:
         self.threshold = threshold
 
     @classmethod
-    def from_config(cls, config) -> "FastDLLM":
+    def from_config(cls, config, model) -> "FastDLLM":
         return cls(
             mask_id=config.mask_token_id,
             temperature=config.temperature,
@@ -31,15 +29,6 @@ class FastDLLM:
             sub_block=config.small_block_size,
             threshold=given(config.confidence_threshold, 0.9),
         )
-
-    def __call__(
-        self, logits: torch.Tensor, rows: CanvasRows
-    ) -> tuple[CanvasRows, torch.Tensor]:
-        x0, p0 = self.score(logits, draws(rows, self.temperature))
-        canvas, done = self.move(
-            rows.canvas, rows.step, rows.shift, rows.width, shift_rows(x0), shift_rows(p0)
-        )
-        return replace(rows, canvas=canvas), done
 
     def score(
         self,

@@ -35,11 +35,10 @@ def final_prefix(
 def fresh_rows(
     rows: CanvasRows, mask_id: int, policy, logits: torch.Tensor
 ) -> CanvasRows:
-    canvas = torch.full_like(rows.canvas, mask_id)
-    if hasattr(policy, "init_canvas"):
-        canvas = policy.init_canvas(canvas, rows.slots)
-    if hasattr(policy, "next_seed") and logits is not None:
-        canvas[:, 0] = policy.next_seed(logits)
+    canvas = policy.init_canvas(torch.full_like(rows.canvas, mask_id), rows.slots)
+    seed = None if logits is None else policy.next_seed(logits)
+    if seed is not None:
+        canvas[:, 0] = seed
     return CanvasRows(
         canvas=canvas,
         original=torch.ones_like(rows.original),
@@ -70,7 +69,7 @@ def advance(
         after, done = rows, torch.zeros_like(rows.committing)
     else:
         after, done = policy(logits, rows)
-        if rows.stops is not None and hasattr(policy, "move"):
+        if rows.stops is not None and policy.stop_exit:
             done = done | final_prefix(after.canvas, rows.shift, rows.stops, mask_id)
     now = torch.zeros_like(rows.committing) if after.emit is None else after.emit
     committing = rows.committing | now

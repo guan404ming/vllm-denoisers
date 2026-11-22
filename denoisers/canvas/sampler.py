@@ -16,7 +16,6 @@ from denoisers.canvas.prune import active_rows, inverse_index
 from denoisers.canvas.state import CanvasState
 from denoisers.canvas.transition import advance
 from denoisers.policies.stats import row_stats
-from denoisers.policies.threshold import LowConfidence
 from denoisers.scheduler import probe
 
 logger = init_logger("vllm.denoisers")
@@ -56,14 +55,14 @@ class BlockDiffusionSampler:
         self.max_model_len = max_model_len
         self.compute_logits = compute_logits
         self.vocab_size = vocab_size
-        self.sparse = isinstance(policy, LowConfidence)
-        self.skip_commit = not getattr(policy, "commit_logits", True)
-        self.stash_logprobs = getattr(policy, "causal_commit", False)
+        self.sparse = policy.sparse_logits
+        self.skip_commit = not policy.commit_logits
+        self.stash_logprobs = policy.causal_commit
         self._stash: dict[int, LogprobsTensors] = {}
-        self.aligned = getattr(policy, "aligned", True)
+        self.aligned = policy.aligned
         self.prune = prune_committed
         self.refresh = prune_refresh
-        self.shifted = getattr(policy, "shifted", False)
+        self.shifted = policy.shifted
         max_num_reqs = state.canvas.shape[0]
         device = state.canvas.device
         self._sampled = torch.zeros(
@@ -78,8 +77,7 @@ class BlockDiffusionSampler:
         )
         self._need_event = torch.cuda.Event()
         self._budget = 0
-        if hasattr(policy, "bind"):
-            policy.bind(state)
+        policy.bind(state)
         if self.prune:
             prune.provider = self.draft_widths
 
@@ -98,8 +96,7 @@ class BlockDiffusionSampler:
         self.state.stop_at(
             req_idx, {sampling_params.eos_token_id, *(sampling_params.stop_token_ids or ())}
         )
-        if hasattr(self.policy, "add_request"):
-            self.policy.add_request(req_idx, sampling_params)
+        self.policy.add_request(req_idx, sampling_params)
 
     def apply_staged_writes(self) -> None:
         self.sampling_states.apply_staged_writes()
@@ -135,10 +132,9 @@ class BlockDiffusionSampler:
             if self.aligned and self.max_model_len - length >= block:
                 shift = length % block
             state.begin(slot, tokens[slot, length - shift : length])
-            if hasattr(self.policy, "init_canvas"):
-                slots = torch.tensor([slot], device=state.canvas.device)
-                canvas = state.canvas[slot : slot + 1]
-                state.canvas[slot] = self.policy.init_canvas(canvas, slots, first=True)[0]
+            slots = torch.tensor([slot], device=state.canvas.device)
+            canvas = state.canvas[slot : slot + 1]
+            state.canvas[slot] = self.policy.init_canvas(canvas, slots, first=True)[0]
             self.req_states.draft_tokens[slot, :block] = state.canvas[slot]
             self._need[slot] = block - shift
             self._need_host[slot] = block - shift
@@ -183,8 +179,7 @@ class BlockDiffusionSampler:
         return logits.view(n, block, -1)
 
     def _scores(self, rows, tokens, slot, max_logprobs, max_ids) -> LogprobsTensors:
-        if hasattr(self.policy, "logprob_logits"):
-            rows = self.policy.logprob_logits(rows)
+        rows = self.policy.logprob_logits(rows)
         k = rows.shape[0]
         return compute_topk_scores(
             rows,
@@ -282,11 +277,7 @@ class BlockDiffusionSampler:
             entropy = after.entropy
             if entropy is None:
                 entropy = row_stats(logits, state.mask_id).entropy
-            if hasattr(self.policy, "probe_score"):
-                scores = self.policy.probe_score(entropy, after.step)
-            else:
-                generated = torch.arange(block, device=device) >= before.shift.unsqueeze(1)
-                scores = probe.mean_entropy(entropy, generated)
+            scores = self.policy.probe_score(entropy, before, after)
             probe.record(
                 slots_np, [input_batch.req_ids[i] for i in rows_np], scores, before.committing
             )

@@ -2,14 +2,14 @@ from vllm.config.diffusion import DiffusionConfig
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 from denoisers.policies import POLICIES
+from denoisers.registry import resolve
 from denoisers.scheduler.probe import uses_denoisers_scheduler
 
 BACKENDS = (AttentionBackendEnum.TRITON_ATTN, AttentionBackendEnum.FLASH_ATTN)
 
 
 def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
-    if hf_config.decode_policy not in POLICIES:
-        raise ValueError(f"decode_policy must be one of {sorted(POLICIES)}.")
+    policy = resolve(POLICIES, hf_config.decode_policy)
     if getattr(hf_config, "max_post_steps", 1) < 1:
         raise ValueError("max_post_steps must be at least 1.")
     if vllm_config.diffusion_config is None:
@@ -25,7 +25,7 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
         raise ValueError(f"{name} does not support batch-sharded sampling.")
     cache = vllm_config.cache_config
     canvas = hf_config.canvas_length
-    aligned = getattr(POLICIES[hf_config.decode_policy], "aligned", True)
+    aligned = policy.aligned
     if aligned and cache.enable_prefix_caching and (
         cache.block_size % canvas or (cache.prefix_match_unit or 0) % canvas
     ):

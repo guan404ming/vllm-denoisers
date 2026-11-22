@@ -5,6 +5,7 @@ from torch.nn import functional as F
 
 from denoisers.canvas.transition import CanvasRows
 from denoisers.policies.capped_stats import capped_row_stats, softcap
+from denoisers.policies.interface import DecodePolicy
 
 try:
     from vllm.distributed import (
@@ -30,7 +31,7 @@ def remaining_steps(entropy: torch.Tensor, step: torch.Tensor) -> torch.Tensor:
     return predicted.clamp(min=0.5)
 
 
-class EntropyBound:
+class EntropyBound(DecodePolicy):
     aligned = False
     causal_commit = True
     commit_logits = False
@@ -208,5 +209,7 @@ class EntropyBound:
         )
         return after, converged
 
-    def probe_score(self, entropy: torch.Tensor, step: torch.Tensor) -> torch.Tensor:
-        return remaining_steps(entropy, step)
+    def probe_score(
+        self, entropy: torch.Tensor, before: CanvasRows, after: CanvasRows
+    ) -> torch.Tensor:
+        return remaining_steps(entropy, after.step)
