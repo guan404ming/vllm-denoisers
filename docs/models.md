@@ -49,6 +49,23 @@
 - `--diffusion-config '{"canvas_length": 32}'` changes the canvas.
 - Images, prefix caching, chunked prefill, logprobs, read extras, and TP work. See [diffusion_gemma.md](diffusion_gemma.md).
 
+## Nemotron Labs Sigma
+
+Serve a checkpoint from the [NVIDIA Sigma collection](https://huggingface.co/collections/nvidia/nemotron-labs-sigma) on one CUDA GPU.
+
+```bash
+VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Sigma-distill-3B-nfe2 \
+  --trust-remote-code --enforce-eager --no-async-scheduling --no-enable-prefix-caching
+```
+
+| Checkpoint | Sampling recipe |
+|---|---|
+| 3B/8B base and instruct | DDIM, 32 steps, log-SNR grid, guidance 3, score temperature 0.3 |
+| Distilled NFE 2/4/8/16 | Fresh noise at each transition and the checkpoint's fixed step count |
+| Distilled self-speculative | Diffusion draft and greedy AR verification from the checkpoint |
+
+vLLM schedules requests and streams completed blocks. The adapter calls NVIDIA's PyTorch sampler once per request per block. Each call encodes the committed prefix again. With BF16, self-speculative output can diverge at a block boundary from a single uninterrupted reference call. Use BF16 and the default sampling parameters. Logprobs, custom decode policies, tensor parallelism, and CUDA graphs are unsupported.
+
 ## Decode knobs
 
 `--hf-overrides` accepts `decode_policy`, `temperature`, `top_p` (Dream), `denoise_steps`, `confidence_threshold`, `editing_threshold`, `max_post_steps`, `max_steps_per_block`, `sub_block_length`, `kv_policy`, `kv_refresh`, `prefix_look`, `after_look`, `input_policy`, `smooth_weight`, `smooth_initial`, `smooth_growth`. The policy keys also take a qualified class name; see [extending.md](extending.md).
