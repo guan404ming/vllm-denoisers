@@ -20,6 +20,15 @@
 | `LLaDA2.1-mini`, `-flash` | `joint` | `--hf-overrides '{"decode_policy": "joint"}'` |
 | `LLaDA2.2-mini`, `-flash` | `indel` | chosen from `expert_capacity`; block routing |
 
+## Stable-DiffCoder (Llama)
+
+The 8B Base and Instruct checkpoints use four-token blocks and mask ID 5. Greedy decoding fills the most confident masked position on each step, including when the prompt ends inside a block. The default threshold of 1.0 reproduces the fixed transfer count in the [official examples](https://github.com/ByteDance-Seed/Stable-DiffCoder).
+
+```bash
+vllm serve ByteDance-Seed/Stable-DiffCoder-8B-Instruct \
+  --attention-backend TRITON_ATTN --block-size 16 --no-enable-chunked-prefill
+```
+
 ## SDAR and TraDo (Qwen3)
 
 - `JetLM/SDAR-{1.7B,4B,8B}-Chat[-b8,-b16,-b32,-b64]`, `JetLM/SDAR-30B-A3B-Chat`, `-Sci`, `Gen-Verse/TraDo-{4B,8B}-Instruct`, `TraDo-8B-Thinking`.
