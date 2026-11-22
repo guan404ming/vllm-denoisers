@@ -77,6 +77,6 @@ def test_prune_turns_off_default_async_scheduling():
         cache_config=SimpleNamespace(enable_prefix_caching=False),
         attention_config=SimpleNamespace(backend=AttentionBackendEnum.FLASH_ATTN),
     )
-    hf_config = SimpleNamespace(decode_policy="low_confidence", canvas_length=BLOCK, prune_committed=True)
+    hf_config = SimpleNamespace(decode_policy="low_confidence", canvas_length=BLOCK, pruner="masked")
     verify_block_diffusion(config, hf_config, "test")
     assert scheduler.async_scheduling is False
