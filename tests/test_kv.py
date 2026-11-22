@@ -117,9 +117,9 @@ def test_window_without_focus_keeps_everything():
     assert window.keep(make_rows(canvas), make_rows(canvas)).all()
 
 
-def runtime(policy, refresh_every=0):
+def runtime(build_policy, refresh_every=0):
     state = CanvasState(3, BLOCK, MASK, torch.device("cpu"))
-    return KvRuntime(policy, state, shifted=False, refresh_every=refresh_every)
+    return KvRuntime(build_policy, state, shifted=False, refresh_every=refresh_every)
 
 
 def rows_at(slots, canvas, step, start):
@@ -129,15 +129,24 @@ def rows_at(slots, canvas, step, start):
 
 
 def test_runtime_refreshes_committed_prefix_with_history_tokens():
-    kv = runtime(Window(llada(), prefix_look=2))
+    kv = runtime(lambda decoder: Window(decoder, prefix_look=2))
+    decoder = llada()
+    policy = kv.for_decoder(decoder)
     slots = torch.tensor([2])
     first = torch.tensor([[1, MASK, MASK, 2, MASK, MASK, MASK, MASK]])
     later = torch.tensor([[1, 3, MASK, 2, MASK, MASK, MASK, MASK]])
     after = rows_at(slots, later, [2], [10])
-    active = kv.update(slots, rows_at(slots, first, [1], [10]), after, full=False)
+    active = kv.update(policy, slots, rows_at(slots, first, [1], [10]), after, full=False)
     assert active[0, :6].tolist() == [-2, -1, 0, 1, 2, 3]
+    other = LLaDA(MASK, BLOCK, sub_block=2, steps=8)
+    other_policy = kv.for_decoder(other)
+    other_slots = torch.tensor([0])
+    other_rows = rows_at(other_slots, first, [1], [10])
+    other_active = kv.update(other_policy, other_slots, other_rows, other_rows, full=False)
+    assert other_active[0, :4].tolist() == [-2, -1, 0, 1]
+    assert kv.for_decoder(decoder) is policy
     history = torch.arange(3 * 20).view(3, 20)
-    tokens = kv.draft_tokens(after, active, history)
+    tokens = kv.draft_tokens(policy, after, active, history)
     assert tokens[0, :6].tolist() == [48, 49, 1, 3, MASK, 2]
     kv.sync()
     assert kv.widths(np.array([2])).tolist() == [6]
@@ -146,15 +155,16 @@ def test_runtime_refreshes_committed_prefix_with_history_tokens():
 
 
 def test_runtime_forces_full_rows_on_refresh_and_on_request():
-    kv = runtime(Masked(MASK), refresh_every=4)
+    kv = runtime(lambda decoder: Masked(MASK), refresh_every=4)
+    policy = kv.for_decoder(llada())
     slots = torch.tensor([0, 1])
     canvas = torch.tensor([[1, MASK, 2, 3, 4, 5, 6, 7]] * 2)
     before = rows_at(slots, canvas, [3, 2], [0, 0])
     after = rows_at(slots, canvas, [4, 3], [0, 0])
-    kv.update(slots, before, after, full=False)
+    kv.update(policy, slots, before, after, full=False)
     kv.sync()
     assert kv.widths(np.array([0, 1])).tolist() == [BLOCK, 1]
     assert kv.identity(np.array([0, 1])).tolist() == [True, False]
-    kv.update(slots, before, after, full=True)
+    kv.update(policy, slots, before, after, full=True)
     kv.sync()
     assert kv.identity(np.array([0, 1])).all()

@@ -15,6 +15,9 @@ ACTIVE = int(os.environ.get("DENOISERS_ACTIVE", "16"))
 
 
 class _Denoisers:
+    aligns_denoiser_prefill = True
+    uses_denoiser_scores = True
+
     def __init__(self, vllm_config, *args, **kwargs):
         super().__init__(vllm_config, *args, **kwargs)
         self.need_mamba_block_aligned_split = True

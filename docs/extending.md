@@ -48,7 +48,7 @@ Requests take registered names only. A policy that cannot build from the model c
 
 ## KV policy
 
-A KV policy picks the canvas cells that the next denoise step forwards. The other cells keep their cached K/V. `keep(before, after)` returns a `[rows, canvas_length]` bool tensor. `prefix(before, after)` returns how many committed tokens before the canvas to re-encode; set `refreshes_prefix = True` when it can be positive.
+The runtime builds one KV policy per selected decoder and reuses it for requests with that decoder. A KV policy picks the canvas cells that the next denoise step forwards. The other cells keep their cached K/V. `keep(before, after)` returns a `[rows, canvas_length]` bool tensor. `prefix(before, after)` returns how many committed tokens before the canvas to re-encode; set `refreshes_prefix = True` when it can be positive.
 
 ```python
 from denoisers.policies.kv import KvPolicy, register

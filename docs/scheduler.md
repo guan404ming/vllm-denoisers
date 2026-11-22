@@ -12,3 +12,5 @@ DENOISERS_HOLD=sjf DENOISERS_ACTIVE=16 VLLM_PLUGINS=denoisers vllm serve ... \
 - The denoisers scheduler also aligns prefill chunks to the canvas, which enables chunked prefill for the block-aligned models.
 
 Effect on DiffusionGemma at 8 req/s (H200, 192 requests): SLO20 goes from 0.46 (FCFS) to 0.60, p50 latency from 21 s to 17 s, at about 12% lower throughput and a longer p99. SJF loses at 4 req/s because it holds requests even when the server is not overloaded.
+
+Custom schedulers inherit `aligns_denoiser_prefill` and `uses_denoiser_scores` from the denoisers scheduler classes. Set these class attributes independently when implementing a scheduler.
