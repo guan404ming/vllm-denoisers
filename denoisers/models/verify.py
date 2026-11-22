@@ -1,6 +1,8 @@
 from vllm.config.diffusion import DiffusionConfig
+from vllm.model_executor.models.config import VerifyAndUpdateConfig
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
+from denoisers.models.config import DecodeConfig
 from denoisers.policies import POLICIES
 from denoisers.registry import resolve
 from denoisers.scheduler.probe import uses_denoisers_scheduler
@@ -44,3 +46,15 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
         scheduler.async_scheduling = False
     if vllm_config.attention_config.backend not in BACKENDS:
         raise ValueError(f"{name} needs --attention-backend TRITON_ATTN or FLASH_ATTN.")
+
+
+class BlockDiffusionModelConfig(VerifyAndUpdateConfig):
+    @classmethod
+    def verify_and_update_config(cls, vllm_config) -> None:
+        hf_config = vllm_config.model_config.hf_config
+        if not isinstance(hf_config, DecodeConfig):
+            raise TypeError(
+                f"{type(hf_config).__name__} is not a denoisers config; drop --trust-remote-code."
+            )
+        hf_config.verify(vllm_config)
+        verify_block_diffusion(vllm_config, hf_config, hf_config.model_type)

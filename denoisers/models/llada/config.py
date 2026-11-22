@@ -1,7 +1,9 @@
 from transformers import LlamaConfig
 
+from denoisers.models.config import DecodeConfig
 
-class LLaDAConfig(LlamaConfig):
+
+class LLaDAConfig(DecodeConfig, LlamaConfig):
     model_type = "llada"
     attribute_map = {
         "hidden_size": "d_model",

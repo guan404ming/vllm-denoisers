@@ -1,7 +1,9 @@
 from transformers import Qwen2Config
 
+from denoisers.models.config import DecodeConfig
 
-class DreamConfig(Qwen2Config):
+
+class DreamConfig(DecodeConfig, Qwen2Config):
     model_type = "Dream"
 
     def __init__(

@@ -1,7 +1,9 @@
 from transformers import Qwen3Config, Qwen3MoeConfig
 
+from denoisers.models.config import DecodeConfig
 
-class SDARDecodeConfig:
+
+class SDARDecodeConfig(DecodeConfig):
     def __init__(
         self,
         canvas_length: int = 4,

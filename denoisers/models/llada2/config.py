@@ -1,7 +1,9 @@
 from transformers import PretrainedConfig
 
+from denoisers.models.config import DecodeConfig
 
-class LLaDA2MoeConfig(PretrainedConfig):
+
+class LLaDA2MoeConfig(DecodeConfig, PretrainedConfig):
     model_type = "llada2_moe"
 
     def __init__(
@@ -41,3 +43,13 @@ class LLaDA2MoeConfig(PretrainedConfig):
         self.max_post_steps = max_post_steps
         self.max_steps_per_block = max_steps_per_block
         super().__init__(**kwargs)
+
+    def verify(self, vllm_config) -> None:
+        if self.block_size not in (None, self.canvas_length):
+            raise ValueError(f"LLaDA2 block_size must equal canvas_length {self.canvas_length}.")
+        if self.decode_policy is None:
+            self.decode_policy = "indel" if self.expert_capacity else "low_confidence"
+        if self.expert_capacity and vllm_config.parallel_config.enable_eplb:
+            raise ValueError("LLaDA2.2 block routing does not support EPLB.")
+        if self.expert_capacity and vllm_config.model_config.quantization is not None:
+            raise ValueError("LLaDA2.2 block routing needs unquantized MoE kernels.")

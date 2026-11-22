@@ -3,29 +3,9 @@ from vllm.model_executor.layers.fused_moe.router.custom_routing_router import (
     CustomRoutingRouter,
 )
 from vllm.model_executor.models.bailing_moe import BailingMoE, BailingMoeV2ForCausalLM
-from vllm.model_executor.models.config import VerifyAndUpdateConfig
 
-from denoisers.models.llada2.config import LLaDA2MoeConfig
 from denoisers.models.llada2.routing import BlockRouter
 from denoisers.models.mixin import BlockDiffusionModel
-from denoisers.models.verify import verify_block_diffusion
-
-
-class LLaDA2MoeModelLMConfig(VerifyAndUpdateConfig):
-    @classmethod
-    def verify_and_update_config(cls, vllm_config) -> None:
-        hf_config = vllm_config.model_config.hf_config
-        if not isinstance(hf_config, LLaDA2MoeConfig):
-            raise TypeError("LLaDA2 needs denoisers's config; drop --trust-remote-code.")
-        if hf_config.block_size not in (None, hf_config.canvas_length):
-            raise ValueError(f"LLaDA2 block_size must equal canvas_length {hf_config.canvas_length}.")
-        if hf_config.decode_policy is None:
-            hf_config.decode_policy = "indel" if hf_config.expert_capacity else "low_confidence"
-        if hf_config.expert_capacity and vllm_config.parallel_config.enable_eplb:
-            raise ValueError("LLaDA2.2 block routing does not support EPLB.")
-        if hf_config.expert_capacity and vllm_config.model_config.quantization is not None:
-            raise ValueError("LLaDA2.2 block routing needs unquantized MoE kernels.")
-        verify_block_diffusion(vllm_config, hf_config, "LLaDA2")
 
 
 class FP32RouterMoE(BailingMoE):
