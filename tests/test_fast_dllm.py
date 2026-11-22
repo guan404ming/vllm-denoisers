@@ -57,9 +57,9 @@ def test_step_matches_hf_sub_block_loop(threshold):
     logits = torch.randn(1, BLOCK, VOCAB, generator=gen) * 4
     logits[..., MASK] = -1e9
     policy = FastDLLM(MASK, BLOCK, SUB, threshold)
-    after, done = policy(logits, make_rows(canvas, mask_id=MASK))
+    after, result = policy(logits, make_rows(canvas, mask_id=MASK))
     assert torch.equal(after.canvas, hf_step(canvas, logits, threshold))
-    assert not done.item()
+    assert not result.done.item()
 
 
 def test_rows_advance_independently_and_finish():
@@ -69,8 +69,8 @@ def test_rows_advance_independently_and_finish():
     logits = torch.zeros(2, BLOCK, VOCAB)
     logits[..., 3] = 50.0
     policy = FastDLLM(MASK, BLOCK, SUB, 0.9)
-    after, done = policy(logits, make_rows(canvas, mask_id=MASK))
-    assert done.tolist() == [True, False]
+    after, result = policy(logits, make_rows(canvas, mask_id=MASK))
+    assert result.done.tolist() == [True, False]
     assert after.canvas[0, -1].item() == 3
     assert (after.canvas[1, SUB : 2 * SUB] == 3).all()
     assert (after.canvas[1, 2 * SUB :] == MASK).all()
@@ -83,7 +83,7 @@ def test_commit_seeds_next_block_with_last_logit():
     logits = torch.zeros(1, BLOCK, VOCAB)
     logits[0, -1, 7] = 50.0
     logits[0, :-1, 2] = 50.0
-    after, _sampled, num_sampled = advance(rows, logits, FastDLLM(MASK, BLOCK, SUB, 0.9), MASK)
+    after, _sampled, num_sampled, _ = advance(rows, logits, FastDLLM(MASK, BLOCK, SUB, 0.9), MASK)
     assert num_sampled.item() == BLOCK
     assert after.canvas[0, 0].item() == 7
     assert (after.canvas[0, 1:] == MASK).all()

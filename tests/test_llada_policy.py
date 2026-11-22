@@ -47,9 +47,9 @@ def test_llada_policy_matches_reference_loop():
     policy = LLaDA(MASK, BLOCK, SUB, steps)
     rows = make_rows(x.clone(), mask_id=MASK)
     for i in range(steps):
-        rows, done = policy(logits_per_step[i], rows)
+        rows, result = policy(logits_per_step[i], rows)
         rows.step = rows.step + 1
-    assert done.all()
+    assert result.done.all()
     assert torch.equal(rows.canvas, expected)
 
 
@@ -64,9 +64,9 @@ def test_llada_policy_counts_sub_blocks_from_prompt_tail():
     policy = LLaDA(MASK, tail + BLOCK, SUB, BLOCK)
     rows = make_rows(canvas, shift=torch.full((2,), tail), mask_id=MASK)
     for i in range(BLOCK):
-        rows, done = policy(logits_per_step[i], rows)
+        rows, result = policy(logits_per_step[i], rows)
         rows.step = rows.step + 1
-    assert done.all()
+    assert result.done.all()
     assert torch.equal(rows.canvas[:, tail:], expected)
 
 
@@ -89,10 +89,10 @@ def test_llada_policy_unmasks_only_current_sub_block():
     logits[..., 3] = 5.0
     logits[0, 6, 3] = 50.0
     rows = make_rows(torch.full((1, BLOCK), MASK), mask_id=MASK)
-    rows, done = policy(logits, rows)
+    rows, result = policy(logits, rows)
     assert (rows.canvas[0, SUB:] == MASK).all()
     assert (rows.canvas[0, :SUB] != MASK).sum() == 1
-    assert not done.item()
+    assert not result.done.item()
 
 
 def test_llada_finishes_partial_sub_block_before_commit():
@@ -102,7 +102,7 @@ def test_llada_finishes_partial_sub_block_before_commit():
     rows = make_rows(torch.full((1, width), MASK))
     for step in range(policy.last + 1):
         rows.step = torch.tensor([step])
-        rows, done = policy(logits, rows)
-        if done.item():
+        rows, result = policy(logits, rows)
+        if result.done.item():
             break
-    assert done.item() and (rows.canvas != MASK).all()
+    assert result.done.item() and (rows.canvas != MASK).all()

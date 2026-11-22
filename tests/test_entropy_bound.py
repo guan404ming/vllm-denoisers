@@ -78,10 +78,10 @@ def test_converges_when_argmax_is_stable_and_confident():
     rows = rows_for(policy, n=1)
     target = torch.arange(BLOCK)
     logits = peaked_logits(target).unsqueeze(0)
-    rows, done = policy(logits, rows)
-    assert not done.item()
-    rows, done = policy(logits, rows)
-    assert done.item()
+    rows, result = policy(logits, rows)
+    assert not result.done.item()
+    rows, result = policy(logits, rows)
+    assert result.done.item()
     assert torch.equal(rows.canvas[0], target)
     assert torch.equal(rows.soft[0], torch.zeros(BLOCK, HIDDEN))
 
@@ -91,10 +91,10 @@ def test_commit_step_reinits_canvas_and_emits_argmax():
     rows = rows_for(policy, n=1)
     target = torch.arange(BLOCK)
     logits = peaked_logits(target).unsqueeze(0)
-    rows, _, _ = advance(rows, logits, policy, -1)
-    rows, _, num = advance(rows, logits, policy, -1)
+    rows, _, _, _ = advance(rows, logits, policy, -1)
+    rows, _, num, _ = advance(rows, logits, policy, -1)
     assert rows.committing.item() and num.item() == 0
-    rows, sampled, num = advance(rows, None, policy, -1)
+    rows, sampled, num, _ = advance(rows, None, policy, -1)
     assert num.item() == BLOCK
     assert torch.equal(sampled[0], target)
     assert not rows.committing.item() and rows.step.item() == 0
@@ -131,10 +131,10 @@ def test_seed_and_pins_hold_through_denoise_and_read_only_emits():
     assert torch.equal(canvas[0], torch.tensor(seed))
     rows.canvas = canvas
     logits = peaked_logits(torch.full((BLOCK,), 9))
-    rows, sampled, num = advance(rows, logits.unsqueeze(0), policy, -1)
+    rows, sampled, num, _ = advance(rows, logits.unsqueeze(0), policy, -1)
     assert num.item() == 0 and rows.canvas[0, 0].item() == 0 and rows.canvas[0, 3].item() == 3
     assert rows.canvas[0, 1].item() == 9
-    rows, sampled, num = advance(rows, logits.unsqueeze(0), policy, -1)
+    rows, sampled, num, _ = advance(rows, logits.unsqueeze(0), policy, -1)
     assert num.item() == BLOCK and not rows.committing.item()
     assert sampled[0, 0].item() == 0 and sampled[0, 3].item() == 3 and sampled[0, 1].item() == 9
 
@@ -145,8 +145,8 @@ def test_constrained_read_and_step_cap():
     rows.slots = torch.tensor([1])
     logits = peaked_logits(torch.full((BLOCK,), 9)).unsqueeze(0)
     logits[0, :, 5] = 40.0
-    after, done = policy(logits, rows)
-    assert done.item()
+    after, result = policy(logits, rows)
+    assert result.done.item()
     assert torch.equal(after.canvas[0], torch.full((BLOCK,), 5))
 
 
@@ -222,7 +222,7 @@ def test_matches_vllm_sample_step(seed):
             tp_group_name="",
         )
         torch.manual_seed(seed * 100 + step)
-        rows, ours_sampled, ours_num = advance(rows, logits.view(n, BLOCK, VOCAB), policy, -1)
+        rows, ours_sampled, ours_num, _ = advance(rows, logits.view(n, BLOCK, VOCAB), policy, -1)
         assert torch.equal(rows.committing, states.is_encoder_phase)
         assert torch.equal(ours_num, num_sampled.long())
         assert torch.equal(ours_sampled[committing], sampled.long()[committing])

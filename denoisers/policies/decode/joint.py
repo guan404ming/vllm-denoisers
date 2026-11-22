@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import torch
 
-from denoisers.canvas.rows import CanvasRows
+from denoisers.canvas.rows import CanvasRows, StepResult
 from denoisers.ops.sampling import given, sample, unmask
 from denoisers.policies.decode.interface import DecodePolicy, registry
 
@@ -35,7 +35,7 @@ class JointThreshold(DecodePolicy):
             max_post_steps=config.max_post_steps,
         )
 
-    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, torch.Tensor]:
+    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, StepResult]:
         canvas = rows.canvas
         x0, p0 = sample(logits, self.mask_id, self.temperature)
         had_masks = (canvas == self.mask_id).any(dim=-1)
@@ -50,4 +50,4 @@ class JointThreshold(DecodePolicy):
             canvas=torch.where(edit, x0, unmasked),
             post_steps=rows.post_steps + (~had_masks).long(),
         )
-        return after, ~had_masks & settled
+        return after, StepResult(~had_masks & settled)

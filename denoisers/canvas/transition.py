@@ -1,6 +1,6 @@
 import torch
 
-from denoisers.canvas.rows import CanvasRows
+from denoisers.canvas.rows import CanvasRows, StepResult
 
 
 def final_prefix(
@@ -13,7 +13,7 @@ def final_prefix(
     return (wall & stop).gather(1, first).squeeze(1)
 
 
-def fresh_rows(rows: CanvasRows, mask_id: int, policy, logits: torch.Tensor) -> CanvasRows:
+def fresh_rows(rows: CanvasRows, mask_id: int, policy, logits: torch.Tensor | None) -> CanvasRows:
     canvas = policy.init_canvas(torch.full_like(rows.canvas, mask_id), rows.slots)
     seed = None if logits is None else policy.next_seed(logits)
     if seed is not None:
@@ -25,8 +25,8 @@ def fresh_rows(rows: CanvasRows, mask_id: int, policy, logits: torch.Tensor) -> 
         shift=torch.zeros_like(rows.shift),
         width=torch.full_like(rows.width, rows.canvas.shape[1]),
         post_steps=torch.zeros_like(rows.post_steps),
-        history=torch.zeros_like(rows.history),
-        history_len=torch.zeros_like(rows.history_len),
+        history=None if rows.history is None else torch.zeros_like(rows.history),
+        history_len=None if rows.history_len is None else torch.zeros_like(rows.history_len),
         committing=torch.zeros_like(rows.committing),
         soft=None if rows.soft is None else torch.zeros_like(rows.soft),
         slots=rows.slots,
@@ -36,22 +36,24 @@ def fresh_rows(rows: CanvasRows, mask_id: int, policy, logits: torch.Tensor) -> 
     )
 
 
-def _select(committing: torch.Tensor, reset: torch.Tensor, value: torch.Tensor):
+def _select(committing: torch.Tensor, reset: torch.Tensor | None, value: torch.Tensor | None):
+    if reset is None:
+        return None
     flag = committing.view(-1, *([1] * (value.dim() - 1)))
     return torch.where(flag, reset, value)
 
 
 def advance(
     rows: CanvasRows, logits: torch.Tensor | None, policy, mask_id: int
-) -> tuple[CanvasRows, torch.Tensor, torch.Tensor]:
+) -> tuple[CanvasRows, torch.Tensor, torch.Tensor, torch.Tensor | None]:
     block = rows.canvas.shape[1]
     if logits is None:
-        after, done = rows, torch.zeros_like(rows.committing)
+        after, step = rows, StepResult(torch.zeros_like(rows.committing))
     else:
-        after, done = policy(logits, rows)
+        after, step = policy(logits, rows)
         if rows.stops is not None and policy.stop_exit:
-            done = done | final_prefix(after.canvas, rows.shift, rows.stops, mask_id)
-    now = torch.zeros_like(rows.committing) if after.emit is None else after.emit
+            step.done = step.done | final_prefix(after.canvas, rows.shift, rows.stops, mask_id)
+    now = torch.zeros_like(rows.committing) if step.emit is None else step.emit
     committing = rows.committing | now
 
     offsets = torch.arange(block, device=rows.canvas.device)
@@ -72,12 +74,11 @@ def advance(
         post_steps=_select(committing, fresh.post_steps, after.post_steps),
         history=_select(committing, fresh.history, after.history),
         history_len=_select(committing, fresh.history_len, after.history_len),
-        committing=~committing & done,
-        soft=None if fresh.soft is None else _select(committing, fresh.soft, after.soft),
-        entropy=after.entropy,
+        committing=~committing & step.done,
+        soft=_select(committing, fresh.soft, after.soft),
         slots=rows.slots,
-        salt=None if rows.salt is None else _select(committing, fresh.salt, rows.salt),
+        salt=_select(committing, fresh.salt, rows.salt),
         stops=rows.stops,
-        start=None if rows.start is None else _select(committing, fresh.start, rows.start),
+        start=_select(committing, fresh.start, rows.start),
     )
-    return result, sampled, num_sampled
+    return result, sampled, num_sampled, step.entropy

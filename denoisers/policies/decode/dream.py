@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import torch
 
-from denoisers.canvas.rows import CanvasRows
+from denoisers.canvas.rows import CanvasRows, StepResult
 from denoisers.ops.sampling import draws, select_unmask, shift_rows
 from denoisers.ops.stats import nucleus_bag, row_stats
 from denoisers.policies.decode.interface import ScoreMovePolicy, registry
@@ -84,11 +84,11 @@ class Dream(ScoreMovePolicy):
         need[:, 0] |= masked[:, 0]
         return need
 
-    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, torch.Tensor]:
+    def __call__(self, logits: torch.Tensor, rows: CanvasRows) -> tuple[CanvasRows, StepResult]:
         x0, score = self.score(logits, draws(rows, self.temperature), self.active(rows))
         x0, score = shift_rows(x0), shift_rows(score)
         canvas, done = self.move(rows.canvas, rows.step, rows.shift, rows.width, x0, score)
-        return replace(rows, canvas=canvas, entropy=-score), done
+        return replace(rows, canvas=canvas), StepResult(done, entropy=-score)
 
     def score(
         self,

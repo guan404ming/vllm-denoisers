@@ -133,7 +133,7 @@ def test_block_decode_matches_hf(seed, threshold, editing_threshold):
     rows = make_rows(canvas.clone(), shift=[shift], mask_id=MASK)
     for t in range(MAX_STEPS + 1):
         final = rows.canvas.clone()
-        rows, _, num_sampled = advance(rows, logits_seq[t : t + 1], policy, MASK)
+        rows, _, num_sampled, _ = advance(rows, logits_seq[t : t + 1], policy, MASK)
         if rows.committing.item():
             assert t + 1 == forwards
             assert rows.canvas[0].tolist() == expected

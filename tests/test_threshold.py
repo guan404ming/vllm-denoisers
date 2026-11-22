@@ -50,9 +50,9 @@ def test_full_block_decodes_in_steps():
     canvas[0, :3] = 1
     for step in range(BLOCK):
         logits = torch.randn(4, BLOCK, MASK + 1, generator=gen)
-        rows, done = policy(logits, make_rows(canvas, step=[step] * 4))
+        rows, result = policy(logits, make_rows(canvas, step=[step] * 4))
         canvas = rows.canvas
-    assert done.all()
+    assert result.done.all()
     assert torch.equal(canvas[0, :3], torch.ones(3, dtype=canvas.dtype))
 
 
@@ -68,10 +68,10 @@ def test_block_ends_after_last_step():
     policy = LowConfidence(MASK, BLOCK, 2, 0.99)
     canvas = torch.full((1, BLOCK), MASK)
     logits = torch.zeros(1, BLOCK, MASK + 1)
-    _, done = policy(logits, make_rows(canvas, step=[0]))
-    assert not done.item()
-    _, done = policy(logits, make_rows(canvas, step=[1]))
-    assert done.item()
+    _, result = policy(logits, make_rows(canvas, step=[0]))
+    assert not result.done.item()
+    _, result = policy(logits, make_rows(canvas, step=[1]))
+    assert result.done.item()
 
 
 def test_sample_with_temperature_skips_inactive_rows():

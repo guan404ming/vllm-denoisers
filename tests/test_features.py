@@ -38,10 +38,10 @@ def test_truncated_canvas_emits_only_valid_positions():
     logits = torch.full((2, BLOCK, MASK + 1), -1e9)
     logits[..., 7] = 0.0
     logits[0, 5:, 0] = 1e9
-    rows, sampled, num_sampled = advance(rows, logits, policy, MASK)
+    rows, sampled, num_sampled, _ = advance(rows, logits, policy, MASK)
     assert num_sampled.tolist() == [0, 0]
     assert rows.canvas[0].tolist() == [1, 2, 7, 7, 7, 0, 0, 0]
-    rows, sampled, num_sampled = advance(rows, logits, policy, MASK)
+    rows, sampled, num_sampled, _ = advance(rows, logits, policy, MASK)
     assert num_sampled.tolist() == [3, 7]
     assert sampled[0, :3].tolist() == [7, 7, 7]
     assert rows.width.tolist() == [BLOCK, BLOCK]
