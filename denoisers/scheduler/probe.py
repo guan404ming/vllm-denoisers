@@ -8,10 +8,6 @@ import torch
 
 ROW = np.dtype([("key", np.uint64), ("score", np.float32)])
 
-enabled = False
-table = None
-
-
 def scheduler_name(scheduler_config) -> str:
     cls = scheduler_config.scheduler_cls
     return cls if isinstance(cls, str) else f"{cls.__module__}.{cls.__name__}"
@@ -65,18 +61,6 @@ class ScoreTable:
             os.remove(self.path)
 
 
-def start(vllm_config) -> None:
-    global enabled, table
-    if not scheduler_name(vllm_config.scheduler_config).startswith(
-        "denoisers.scheduler.resident_active"
-    ):
-        return
-    table = ScoreTable(
-        table_path(vllm_config), vllm_config.scheduler_config.max_num_seqs, create=True
-    )
-    enabled = True
-
-
 def entropy(logits: torch.Tensor) -> torch.Tensor:
     log_probs = torch.log_softmax(logits.float(), dim=-1).clamp(min=-1e4)
     return -(log_probs.exp() * log_probs).sum(dim=-1)
@@ -87,21 +71,35 @@ def mean_entropy(entropy: torch.Tensor, counted: torch.Tensor) -> torch.Tensor:
     return (entropy * weight).sum(dim=1) / weight.sum(dim=1).clamp(min=1)
 
 
-_pending = None
-_buffers = [None, None]
+class Probe:
+    def __init__(self, table: ScoreTable):
+        self.table = table
+        self.pending = None
+        self.buffers = [None, None]
+
+    def record(
+        self, slots, req_ids: list[str], scores: torch.Tensor, committing: torch.Tensor
+    ) -> None:
+        index = 0
+        if self.pending is not None:
+            prev_slots, prev_ids, prev_buf, prev_index = self.pending
+            self.table.write(prev_slots, prev_ids, prev_buf.tolist())
+            index = 1 - prev_index
+        values = torch.where(committing, torch.nan, scores.float())
+        buf = self.buffers[index]
+        if buf is None or buf.numel() < values.numel():
+            buf = self.buffers[index] = torch.empty(
+                values.numel(), dtype=torch.float32, pin_memory=torch.cuda.is_available()
+            )
+        buf = buf[: values.numel()]
+        buf.copy_(values, non_blocking=True)
+        self.pending = (slots, req_ids, buf, index)
 
 
-def record(slots, req_ids: list[str], scores: torch.Tensor, committing: torch.Tensor) -> None:
-    global _pending
-    index = 0
-    if _pending is not None:
-        prev_slots, prev_ids, prev_buf, prev_index = _pending
-        table.write(prev_slots, prev_ids, prev_buf.tolist())
-        index = 1 - prev_index
-    values = torch.where(committing, torch.nan, scores.float())
-    buf = _buffers[index]
-    if buf is None or buf.numel() < values.numel():
-        buf = _buffers[index] = torch.empty(values.numel(), dtype=torch.float32, pin_memory=torch.cuda.is_available())
-    buf = buf[: values.numel()]
-    buf.copy_(values, non_blocking=True)
-    _pending = (slots, req_ids, buf, index)
+def start(vllm_config) -> Probe | None:
+    if not scheduler_name(vllm_config.scheduler_config).startswith(
+        "denoisers.scheduler.resident_active"
+    ):
+        return None
+    capacity = vllm_config.scheduler_config.max_num_seqs
+    return Probe(ScoreTable(table_path(vllm_config), capacity, create=True))

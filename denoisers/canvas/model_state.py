@@ -17,9 +17,10 @@ from denoisers.registry import resolve
 from denoisers.scheduler import probe
 
 
-def start_probe(vllm_config) -> None:
+def start_probe(vllm_config) -> probe.Probe | None:
     if get_tensor_model_parallel_rank() == 0:
-        probe.start(vllm_config)
+        return probe.start(vllm_config)
+    return None
 
 
 class BlockDiffusionModelState(ModelState):
@@ -27,10 +28,10 @@ class BlockDiffusionModelState(ModelState):
 
     def __init__(self, vllm_config, model, encoder_cache, device) -> None:
         super().__init__(vllm_config, model, encoder_cache, device)
-        start_probe(vllm_config)
+        self.probe = start_probe(vllm_config)
         hf_config = self.model_config.hf_config
         self.policy = model.build_policy()
-        self.policy.dense_scores = probe.enabled
+        self.policy.dense_scores = self.probe is not None
         self.aligned = self.policy.aligned
         self.causal_commit = self.policy.causal_commit
         self.causal_prefill = self.policy.causal_prefill
@@ -78,6 +79,7 @@ class BlockDiffusionModelState(ModelState):
             self.model.compute_logits,
             self.model_config.get_vocab_size(),
             pruning=self.pruning,
+            probe=self.probe,
         ), None
 
     def compute_sample_logits(self, hidden_states: torch.Tensor) -> torch.Tensor:
