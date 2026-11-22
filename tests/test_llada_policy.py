@@ -93,3 +93,16 @@ def test_llada_policy_unmasks_only_current_sub_block():
     assert (rows.canvas[0, SUB:] == MASK).all()
     assert (rows.canvas[0, :SUB] != MASK).sum() == 1
     assert not done.item()
+
+
+def test_llada_finishes_partial_sub_block_before_commit():
+    width = 6
+    policy = LLaDA(MASK, width, SUB, width)
+    logits = torch.zeros(1, width, VOCAB)
+    rows = make_rows(torch.full((1, width), MASK))
+    for step in range(policy.last + 1):
+        rows.step = torch.tensor([step])
+        rows, done = policy(logits, rows)
+        if done.item():
+            break
+    assert done.item() and (rows.canvas != MASK).all()

@@ -21,9 +21,10 @@ class LLaDA(ScoreMovePolicy):
         self.mask_id = mask_id
         self.temperature = temperature
         self.sub_block = sub_block
-        self.steps_per_block = max(steps // (block_length // sub_block), 1)
+        full_blocks, remainder = divmod(block_length, sub_block)
+        self.steps_per_block = max(steps // max(full_blocks, 1), 1)
         self.schedule = transfer_schedule(sub_block, self.steps_per_block)
-        self.last = self.steps_per_block * (block_length // sub_block) - 1
+        self.last = self.steps_per_block * (full_blocks + bool(remainder)) - 1
 
     @classmethod
     def from_config(cls, config, model) -> "LLaDA":

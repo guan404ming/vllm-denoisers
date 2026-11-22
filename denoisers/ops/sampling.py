@@ -7,6 +7,18 @@ def given(value, fallback):
     return fallback if value is None else value
 
 
+def exclude_filtered_mask(
+    logits: torch.Tensor, mask_id: int, top_k: torch.Tensor | None, top_p: torch.Tensor | None
+) -> None:
+    if mask_id < 0:
+        return
+    mask = logits[:, mask_id]
+    if top_k is not None:
+        mask.masked_fill_(top_k < logits.shape[-1], -torch.inf)
+    if top_p is not None:
+        mask.masked_fill_(top_p < 1, -torch.inf)
+
+
 def uniform(salt: torch.Tensor, step: torch.Tensor, block: int) -> torch.Tensor:
     cells = torch.arange(block, device=salt.device)
     key = (salt.unsqueeze(-1) * 1000003 + step.unsqueeze(-1)) * 1000003 + cells
