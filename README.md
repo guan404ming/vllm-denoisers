@@ -12,7 +12,7 @@ vLLM plugin for diffusion language models. Install it and vLLM loads it; no fork
 | DiffusionGemma | `google/diffusiongemma-26B-A4B-it` | uniform noise, self-conditioning | `entropy_bound` |
 
 - Continuous batching, CUDA graphs, prefix caching, tensor parallelism, fp8.
-- Pluggable decode policies, row pruners, and model families.
+- Pluggable decode, KV, input, and hold policies, per-request decode policies, and model families.
 - DiffusionGemma: +20-25% throughput over vLLM's native path on H200, same GSM8K and MMLU.
 - Tracks vLLM main; last verified at `5689c2790`.
 
@@ -27,7 +27,7 @@ vllm serve inclusionAI/LLaDA2.0-mini \
 - [models.md](docs/models.md): per-family flags and decode knobs.
 - [deviations.md](docs/deviations.md): where decoding differs from the HF reference.
 - [limits.md](docs/limits.md): what is not supported.
-- [extending.md](docs/extending.md): custom policies, pruners, and families.
+- [extending.md](docs/extending.md): custom policies and model families.
 - [scheduler.md](docs/scheduler.md): resident/active scheduling.
 - [diffusion_gemma.md](docs/diffusion_gemma.md): the DiffusionGemma sampler.
 - [results.md](docs/results.md): throughput, SLO, and accuracy.

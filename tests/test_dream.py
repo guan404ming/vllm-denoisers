@@ -3,12 +3,18 @@ from pathlib import Path
 
 import pytest
 import torch
-from denoisers.models.dream.config import DreamConfig
-from denoisers.models.dream.tokenizer import DreamTokenizer
-from denoisers.policies import POLICIES
-from denoisers.policies.dream import Dream, nucleus_stats, ratio_table, transfer_ratios
 from support import make_rows
 from transformers import Qwen2TokenizerFast
+
+from denoisers.models.dream.config import DreamConfig
+from denoisers.models.dream.tokenizer import DreamTokenizer
+from denoisers.policies.decode import registry
+from denoisers.policies.decode.dream import (
+    Dream,
+    nucleus_stats,
+    ratio_table,
+    transfer_ratios,
+)
 
 MASK = 15
 VOCAB = 16
@@ -39,7 +45,9 @@ def hf_generate(x, logits_per_step, steps, eps):
         _, x0 = probs.max(dim=-1)
         confidence = torch.sum(probs * torch.log(probs + 1e-10), dim=-1)
         num_mask_token = mask_index.sum() / mask_index.shape[0]
-        number_transfer = int(num_mask_token * (1 - s / t)) if i < steps - 1 else int(num_mask_token)
+        number_transfer = (
+            int(num_mask_token * (1 - s / t)) if i < steps - 1 else int(num_mask_token)
+        )
         full_confidence = torch.full_like(x, -torch.inf, dtype=torch.float32)
         full_confidence[mask_index] = confidence
         if number_transfer > 0:
@@ -58,7 +66,7 @@ def test_policy_matches_hf(steps):
     canvas = torch.full((1, BLOCK), MASK)
     canvas[0, :2] = torch.tensor([3, 7])
     logits_per_step = [torch.randn(1, BLOCK, VOCAB, generator=gen) * 4 for _ in range(steps)]
-    logits_per_step = [torch.where(torch.arange(VOCAB) == MASK, -1e4, l) for l in logits_per_step]
+    logits_per_step = [torch.where(torch.arange(VOCAB) == MASK, -1e4, x) for x in logits_per_step]
     expected = hf_generate(canvas, logits_per_step, steps, 1e-3)
     out = canvas
     for step in range(steps):
@@ -125,7 +133,7 @@ def test_prompt_tail_shortens_the_schedule():
     canvas[0, :shift] = torch.tensor([3, 7, 2])
     steps = BLOCK - shift
     logits_per_step = [torch.randn(1, BLOCK, VOCAB, generator=gen) * 4 for _ in range(steps)]
-    logits_per_step = [torch.where(torch.arange(VOCAB) == MASK, -1e4, l) for l in logits_per_step]
+    logits_per_step = [torch.where(torch.arange(VOCAB) == MASK, -1e4, x) for x in logits_per_step]
     expected = hf_generate(canvas, logits_per_step, steps, 1e-3)
     out = canvas
     for step in range(steps):
@@ -159,7 +167,7 @@ def test_checkpoint_config_gets_canvas_defaults(tmp_path: Path):
     assert cfg.denoise_steps is None
     assert cfg.vocab_size == 152064 and cfg.num_key_value_heads == 4
     cfg.denoise_steps = cfg.canvas_length
-    policy = POLICIES[cfg.decode_policy].from_config(cfg, None)
+    policy = registry.resolve(cfg.decode_policy).from_config(cfg, None)
     assert policy.table.shape == (257, 256)
     assert policy.last[256] == 255 and policy.last[172] == 171
 

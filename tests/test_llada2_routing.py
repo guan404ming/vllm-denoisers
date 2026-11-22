@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 import torch
+
 from denoisers.models.llada2.routing import BlockRouter
 
 EXPERTS = 16

@@ -1,7 +1,6 @@
-from denoisers.canvas.model_state import BlockDiffusionModelState
 from denoisers.models.fp8_head import Fp8Head
-from denoisers.policies import POLICIES
-from denoisers.registry import resolve
+from denoisers.policies.decode import registry
+from denoisers.runtime.model_state import BlockDiffusionModelState
 
 
 class BlockDiffusionModel:
@@ -10,7 +9,10 @@ class BlockDiffusionModel:
         return BlockDiffusionModelState
 
     def build_policy(self):
-        return resolve(POLICIES, self.config.decode_policy).from_config(self.config, self)
+        return registry.resolve(self.config.decode_policy).from_config(self.config, self)
+
+    def input_embedding(self):
+        return self.model.embed_tokens
 
     def load_weights(self, weights):
         loaded = super().load_weights(weights)

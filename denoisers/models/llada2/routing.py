@@ -2,9 +2,7 @@ import torch
 
 
 class BlockRouter:
-    def __init__(
-        self, gate, block_length: int, expert_capacity: int, routed_scaling_factor: float
-    ):
+    def __init__(self, gate, block_length: int, expert_capacity: int, routed_scaling_factor: float):
         self.gate = gate
         self.block_length = block_length
         self.expert_capacity = expert_capacity

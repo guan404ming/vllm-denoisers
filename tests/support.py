@@ -1,5 +1,6 @@
 import torch
-from denoisers.canvas.transition import CanvasRows
+
+from denoisers.canvas.rows import CanvasRows
 
 HISTORY = 8
 

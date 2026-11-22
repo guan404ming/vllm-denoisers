@@ -1,9 +1,10 @@
 import pytest
 import torch
-from denoisers.canvas.batch import prefill_block_ranges
-from denoisers.canvas.transition import advance, final_prefix
-from denoisers.policies.threshold import LowConfidence
 from support import make_rows
+
+from denoisers.canvas.transition import advance, final_prefix
+from denoisers.policies.decode.low_confidence import LowConfidence
+from denoisers.runtime.batch import prefill_block_ranges
 
 MASK = 99
 BLOCK = 32

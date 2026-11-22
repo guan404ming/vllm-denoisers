@@ -1,7 +1,8 @@
 # Limits
 
-- Attention: `TRITON_ATTN`, or `FLASH_ATTN` on Hopper and newer (per-request causal needs FA4) with [patches/vllm-0.33.0rc1.dev487-flash-block-ranges.patch](../patches/vllm-0.33.0rc1.dev487-flash-block-ranges.patch) applied to vLLM.
+- Attention: `TRITON_ATTN`, or `FLASH_ATTN` on Hopper and newer (per-request causal needs FA4) with [denoisers/patches/vllm-0.33.0rc1.dev487-flash-block-ranges.patch](../denoisers/patches/vllm-0.33.0rc1.dev487-flash-block-ranges.patch) applied to vLLM.
 - No pipeline parallelism, no batch-sharded sampling.
+- A KV policy turns off async scheduling. `prefix_look` needs prefix caching off.
 - Tensor-parallel ranks must share one node when a denoisers scheduler is used.
 - Chunked prefill needs a denoisers scheduler, except for DiffusionGemma.
 - Prefix caching needs `--block-size` as a multiple of the canvas, except for DiffusionGemma. The prompt tail after the last canvas boundary is re-encoded with the first block.
