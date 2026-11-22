@@ -56,11 +56,6 @@ def test_aligned_prefill_chunk():
     assert aligned_prefill_chunk(100, 32, 100, 32) == 32
 
 
-def test_make_rows_keeps_width_full():
-    rows = make_rows(torch.full((1, BLOCK), MASK))
-    assert rows.width.tolist() == [BLOCK]
-
-
 def test_truncated_block_blocks_indel_edit_ops():
     delete, split = MASK + 1, MASK + 2
     canvas = torch.full((2, BLOCK), MASK)

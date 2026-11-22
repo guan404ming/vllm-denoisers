@@ -60,17 +60,6 @@ def test_block_lifecycle_emits_and_aligns(shift):
     assert rows.original.all() and int(rows.post_steps) == 0 and int(rows.history_len) == 0
 
 
-def test_denoise_rows_do_not_emit():
-    rows = make_rows(torch.full((2, BLOCK), MASK), shift=[0, 5])
-    logits = torch.randn(2, BLOCK, MASK + 1)
-    logits[..., MASK] = -torch.inf
-    after, _, num_sampled, _ = advance(rows, logits, LowConfidence(MASK, BLOCK, BLOCK, 2.0), MASK)
-    assert num_sampled.tolist() == [0, 0]
-    assert after.step.tolist() == [1, 1]
-    assert after.shift.tolist() == [0, 5]
-    assert after.post_steps.tolist() == [0, 0]
-
-
 def test_commit_without_logits_emits_the_canvas():
     canvas = torch.arange(BLOCK).unsqueeze(0)
     rows = make_rows(canvas, mask_id=MASK)

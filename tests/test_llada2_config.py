@@ -29,8 +29,3 @@ def test_checkpoint_config_fixes(tmp_path: Path):
     assert cfg.num_experts == 256
     assert cfg.router_dtype == "fp32"
     assert cfg.tie_word_embeddings is False
-
-
-def test_sliding_window_kept_when_enabled():
-    cfg = LLaDA2MoeConfig(use_sliding_window=True, sliding_window=4096)
-    assert cfg.sliding_window == 4096

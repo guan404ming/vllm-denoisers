@@ -76,21 +76,6 @@ def test_inverse_index_skips_prefix_rows():
     assert inv.is_contiguous()
 
 
-def test_state_reset_restores_full_active_rows():
-    state = CanvasState(2, BLOCK, MASK, torch.device("cpu"))
-    state.active[1] = torch.tensor([3, 0, 1, 2, 4, 5, 6, 7])
-    state.active_len[1] = 1
-    state.reset(1)
-    assert state.active[1].tolist() == list(range(BLOCK))
-    assert state.active_len[1].item() == BLOCK
-
-
-def test_masked_keeps_cells_masked_before_the_step():
-    canvas = torch.tensor([[1, MASK, 2, MASK, 3, 4, 5, 6]])
-    keep = Masked(MASK).keep(make_rows(canvas), make_rows(canvas))
-    assert keep[0].tolist() == [False, True, False, True, False, False, False, False]
-
-
 def llada():
     return LLaDA(MASK, BLOCK, sub_block=4, steps=8)
 

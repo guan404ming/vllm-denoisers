@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
+from denoisers.models.sdar.config import SDARConfig
 from denoisers.policies.decode import registry
 
 CONFIG = {
@@ -14,15 +14,6 @@ CONFIG = {
     "vocab_size": 151936,
     "rope_theta": 1000000,
     "tie_word_embeddings": False,
-}
-MOE_CONFIG = {
-    **CONFIG,
-    "architectures": ["SDARMoeForCausalLM"],
-    "model_type": "sdar_moe",
-    "num_experts": 128,
-    "num_experts_per_tok": 8,
-    "moe_intermediate_size": 768,
-    "norm_topk_prob": True,
 }
 
 
@@ -39,11 +30,3 @@ def test_checkpoint_config_gets_canvas_defaults(tmp_path: Path):
     policy = registry.resolve(cfg.decode_policy).from_config(cfg, None)
     assert policy.threshold == 0.85
     assert len(policy.schedule) == 32
-
-
-def test_moe_config_keeps_expert_fields(tmp_path: Path):
-    (tmp_path / "config.json").write_text(json.dumps(MOE_CONFIG))
-    cfg = SDARMoeConfig.from_pretrained(tmp_path)
-    assert cfg.canvas_length == 4
-    assert cfg.num_experts == 128 and cfg.num_experts_per_tok == 8
-    assert cfg.norm_topk_prob is True

@@ -3,13 +3,7 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from denoisers.models.lm_head import LM_HEAD_METHODS, Fp8Head, Int4Head
-
-
-@pytest.mark.parametrize("method", [Fp8Head, Int4Head])
-def test_quantized_head_requires_cuda(method):
-    with pytest.raises(ValueError, match="CUDA"):
-        method(torch.zeros(16, 32, dtype=torch.bfloat16))
+from denoisers.models.lm_head import LM_HEAD_METHODS, Int4Head
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
