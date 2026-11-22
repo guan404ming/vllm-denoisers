@@ -7,4 +7,5 @@
 - Prefix caching needs `--block-size` as a multiple of the canvas, except for DiffusionGemma. The prompt tail after the last canvas boundary is re-encoded with the first block.
 - A block that does not fit before `max_model_len` starts at the prompt end and decodes only the positions that fit.
 - LLaDA2.2 block routing replaces the MoE router after construction; quantized or fused-routing MoE kernels and EPLB are rejected.
-- Not supported by design: D2F, full-bidirectional models without a KV cache (LLaDA-8B, Dream, DiffuCoder, CoDA, RND1), Fast-dLLM v1.
+- Full-attention models (LLaDA-8B, Dream) match the reference only while prompt and response fit in one canvas; see [deviations.md](deviations.md).
+- Not supported: D2F, DiffuCoder, CoDA, RND1, Fast-dLLM v1.
