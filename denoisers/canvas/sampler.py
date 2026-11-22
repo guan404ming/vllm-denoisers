@@ -16,7 +16,7 @@ from denoisers.canvas.prune import RowPruning, inverse_index
 from denoisers.canvas.state import CanvasState
 from denoisers.canvas.transition import advance
 from denoisers.policies.stats import row_stats
-from denoisers.scheduler import probe
+from denoisers.scheduler.probe import Probe
 
 logger = init_logger("vllm.denoisers")
 
@@ -44,6 +44,7 @@ class BlockDiffusionSampler:
         compute_logits,
         vocab_size,
         pruning: RowPruning | None = None,
+        probe: Probe | None = None,
     ):
         self.sampling_states = sampler.sampling_states
         self.logprob_token_ids_state = sampler.logprob_token_ids_state
@@ -60,6 +61,7 @@ class BlockDiffusionSampler:
         self._stash: dict[int, LogprobsTensors] = {}
         self.aligned = policy.aligned
         self.pruning = pruning
+        self.probe = probe
         max_num_reqs = state.canvas.shape[0]
         device = state.canvas.device
         self._sampled = torch.zeros(
@@ -222,10 +224,10 @@ class BlockDiffusionSampler:
         before = state.gather(slots)
         after, row_sampled, row_num_sampled = advance(before, None, self.policy, state.mask_id)
         state.scatter(slots, after)
-        if probe.enabled:
+        if self.probe is not None:
             slots_np = input_batch.idx_mapping_np[rows_np]
             ids = [input_batch.req_ids[i] for i in rows_np]
-            probe.record(slots_np, ids, before.step, before.committing)
+            self.probe.record(slots_np, ids, before.step, before.committing)
         self.req_states.draft_tokens[slots, : state.block_length] = after.canvas
         if self.pruning is not None:
             self.pruning.restore(slots)
@@ -267,16 +269,16 @@ class BlockDiffusionSampler:
         state.scatter(slots, after)
         if self.sparse:
             self._need[slots] = (after.canvas == self.state.mask_id).sum(1, dtype=torch.int32)
-        if probe.enabled:
+        if self.probe is not None:
             entropy = after.entropy
             if entropy is None:
                 entropy = row_stats(logits, state.mask_id).entropy
             scores = self.policy.probe_score(entropy, before, after)
-            probe.record(
+            self.probe.record(
                 slots_np, [input_batch.req_ids[i] for i in rows_np], scores, before.committing
             )
         if self.pruning is not None:
-            full = logprob_args is not None or probe.enabled
+            full = logprob_args is not None or self.probe is not None
             active = self.pruning.update(slots, before, after, full)
             self.req_states.draft_tokens[slots, :block] = after.canvas.gather(1, active)
         else:
@@ -315,7 +317,7 @@ class BlockDiffusionSampler:
         max_ids = self.logprob_token_ids_state.max_num_token_ids(slots_np)
         want_logprobs = max_logprobs >= 0 or max_ids > 0
         logprob_args = (max_logprobs, max_ids) if want_logprobs else None
-        full = not self.sparse or probe.enabled or want_logprobs
+        full = not self.sparse or self.probe is not None or want_logprobs
         if 2 * len(rows_np) * block > self._budget:
             self._budget = self._budget_tokens(device)
         per_chunk = max(1, self._budget // block)

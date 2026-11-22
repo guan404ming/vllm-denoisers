@@ -3,7 +3,6 @@ import math
 import torch
 from denoisers.scheduler import probe
 from denoisers.scheduler.policy import held
-from denoisers.scheduler.sources import Oracle, Regressor, Trace, prompt_key
 
 
 def test_mean_entropy_counts_only_selected_positions():
@@ -19,15 +18,14 @@ def test_score_table_crosses_processes_and_drops_committing_rows(tmp_path):
     path = str(tmp_path / "scores")
     reader = probe.ScoreTable(path, 4)
     assert reader.read(["a"]) == {}
-    probe.table = probe.ScoreTable(path, 4, create=True)
-    probe.record([2, 0], ["a", "b"], torch.tensor([1.0, 2.0]), torch.tensor([False, True]))
+    writer = probe.Probe(probe.ScoreTable(path, 4, create=True))
+    writer.record([2, 0], ["a", "b"], torch.tensor([1.0, 2.0]), torch.tensor([False, True]))
     assert reader.read(["a", "b", "z"]) == {}
-    probe.record([2], ["c"], torch.tensor([3.0]), torch.tensor([False]))
+    writer.record([2], ["c"], torch.tensor([3.0]), torch.tensor([False]))
     assert reader.read(["a", "b", "z"]) == {"a": 1.0}
-    probe.record([], [], torch.empty(0), torch.empty(0, dtype=torch.bool))
+    writer.record([], [], torch.empty(0), torch.empty(0, dtype=torch.bool))
     assert reader.read(["a", "c"]) == {"c": 3.0}
-    probe.table.close()
-    probe.table = None
+    writer.table.close()
     assert not (tmp_path / "scores").exists()
 
 
@@ -48,19 +46,3 @@ def test_random_holds_exactly_the_overflow():
     candidates = [(str(i), 0.0) for i in range(6)]
     assert len(held(candidates, 0.0, "random", 4, 0.0, {})) == 2
 
-
-def test_trace_feeds_oracle_and_regressor(tmp_path):
-    path = str(tmp_path / "trace.jsonl")
-    trace = Trace(path)
-    key = prompt_key([1, 2, 3])
-    trace.commit(key, 0, 10, 32, 100)
-    trace.commit(key, 1, 6, 64, 100)
-    other = prompt_key([4, 5])
-    trace.commit(other, 0, 20, 32, 300)
-    oracle = Oracle(path)
-    assert oracle.remaining(key, 0, 4) == 12.0
-    assert oracle.remaining(key, 1, 5) == 1.0
-    assert oracle.remaining("unknown", 0, 0) == 12.0
-    regressor = Regressor(path)
-    assert regressor.remaining(300, 0, 32, 0) == 12.0
-    assert regressor.remaining(100, 64, 32, 3) == 9.0

@@ -28,4 +28,6 @@ modal run tests/llada2_eval.py::features --model JetLM/SDAR-1.7B-Chat
 - `models/diffusion_gemma/model.py` subclasses vLLM's `DiffusionGemmaForConditionalGeneration` and calls `Gemma4Config.verify_and_update_config`. The policy reads `embed_tokens.shard_indices`, `model.normalizer`, and `final_logit_softcapping`.
 - The other models subclass vLLM's Qwen2, Qwen3, Qwen3-MoE, and BailingMoeV2 classes.
 - The runtime uses the `ModelState` hooks `prepare_inputs`, `prepare_inputs_embeds`, `prepare_attn`, `custom_sampler`, `compute_sample_logits`, and `dummy_sampler_run`.
+- A row pruner wraps `DraftTokensHandler.set_draft_tokens` to cap each request's drafts to its active rows. The runner builds that handler without a `ModelState` reference, so the hook is process-wide.
+- `denoisers.registry` resolves qualified class names with `vllm.utils.import_utils.resolve_obj_by_qualname`.
 - After a bump: CPU tests, then a GPU smoke per family and `tests/test_entropy_bound.py` on a GPU.
