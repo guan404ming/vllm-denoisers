@@ -5,7 +5,7 @@ import pytest
 import torch
 from denoisers.canvas.transition import advance
 from denoisers.models.fast_dllm.config import FastDLLMQwenConfig
-from denoisers.policies import build
+from denoisers.policies import POLICIES
 from denoisers.policies.fast_dllm import FastDLLM
 from support import make_rows
 
@@ -95,6 +95,6 @@ def test_checkpoint_config_gets_decode_defaults(tmp_path: Path):
     assert cfg.canvas_length == cfg.bd_size == 32
     assert cfg.mask_token_id == 151665
     assert cfg.num_key_value_heads == 2
-    policy = build(cfg.decode_policy, cfg)
+    policy = POLICIES[cfg.decode_policy].from_config(cfg, None)
     assert isinstance(policy, FastDLLM)
     assert policy.threshold == 0.9

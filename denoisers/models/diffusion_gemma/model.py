@@ -6,7 +6,6 @@ from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from denoisers.models.fp8_head import fp8_supported
 from denoisers.models.mixin import BlockDiffusionModel
 from denoisers.models.verify import verify_block_diffusion
-from denoisers.policies.entropy_bound import EntropyBound
 from denoisers.policies.sampling import given
 
 GENERATION_FIELDS = ("t_min", "t_max", "confidence_threshold", "stability_threshold")
@@ -56,8 +55,5 @@ class DiffusionGemmaForBlockDiffusionConfig(VerifyAndUpdateConfig):
 
 
 class DiffusionGemma(BlockDiffusionModel, DiffusionGemmaForConditionalGeneration):
-    def build_policy(self):
-        return EntropyBound.from_config(self.config, self)
-
     def compute_logits(self, hidden_states):
         return self.logits_processor(self.lm_head, hidden_states)

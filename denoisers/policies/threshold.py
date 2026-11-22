@@ -1,12 +1,13 @@
-from dataclasses import replace
-
 import torch
 
 from denoisers.canvas.transition import CanvasRows
-from denoisers.policies.sampling import draws, given, sample, transfer_schedule, unmask
+from denoisers.policies.interface import ScoreMovePolicy
+from denoisers.policies.sampling import given, sample, transfer_schedule, unmask
 
 
-class LowConfidence:
+class LowConfidence(ScoreMovePolicy):
+    sparse_logits = True
+
     def __init__(
         self,
         mask_id: int,
@@ -21,7 +22,7 @@ class LowConfidence:
         self.schedule = transfer_schedule(block_length, steps)
 
     @classmethod
-    def from_config(cls, config) -> "LowConfidence":
+    def from_config(cls, config, model) -> "LowConfidence":
         return cls(
             mask_id=config.mask_token_id,
             temperature=config.temperature,
@@ -30,12 +31,8 @@ class LowConfidence:
             threshold=given(config.confidence_threshold, 0.95),
         )
 
-    def __call__(
-        self, logits: torch.Tensor, rows: CanvasRows
-    ) -> tuple[CanvasRows, torch.Tensor]:
-        stats = self.score(logits, draws(rows, self.temperature), rows.canvas == self.mask_id)
-        canvas, done = self.move(rows.canvas, rows.step, rows.shift, rows.width, *stats)
-        return replace(rows, canvas=canvas), done
+    def active(self, rows: CanvasRows) -> torch.Tensor:
+        return rows.canvas == self.mask_id
 
     def score(
         self,

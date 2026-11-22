@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from denoisers.models.llada.config import LLaDAConfig
-from denoisers.policies import build
+from denoisers.policies import POLICIES
 
 CONFIG = {
     "architectures": ["LLaDAModelLM"],
@@ -32,6 +32,6 @@ def test_checkpoint_config_maps_llama_fields(tmp_path: Path):
     assert cfg.tie_word_embeddings is False
     assert cfg.canvas_length == 256 and cfg.mask_token_id == 126336
     assert cfg.decode_policy == "llada" and cfg.sub_block_length == 32
-    policy = build(cfg.decode_policy, cfg)
+    policy = POLICIES[cfg.decode_policy].from_config(cfg, None)
     assert policy.steps_per_block == 32 and policy.last == 255
     assert policy.schedule.tolist() == [1] * 32

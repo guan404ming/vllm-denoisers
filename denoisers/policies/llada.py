@@ -1,13 +1,12 @@
-from dataclasses import replace
-
 import torch
 
 from denoisers.canvas.transition import CanvasRows
-from denoisers.policies.sampling import draws, given, sample, select_unmask, transfer_schedule
+from denoisers.policies.interface import ScoreMovePolicy
+from denoisers.policies.sampling import given, sample, select_unmask, transfer_schedule
 from denoisers.policies.stats import sample_stats
 
 
-class LLaDA:
+class LLaDA(ScoreMovePolicy):
     causal_prefill = False
 
     def __init__(
@@ -26,7 +25,7 @@ class LLaDA:
         self.last = self.steps_per_block * (block_length // sub_block) - 1
 
     @classmethod
-    def from_config(cls, config) -> "LLaDA":
+    def from_config(cls, config, model) -> "LLaDA":
         return cls(
             mask_id=config.mask_token_id,
             block_length=config.canvas_length,
@@ -35,14 +34,8 @@ class LLaDA:
             temperature=config.temperature,
         )
 
-    def __call__(
-        self, logits: torch.Tensor, rows: CanvasRows
-    ) -> tuple[CanvasRows, torch.Tensor]:
-        stats = self.score(
-            logits, draws(rows, self.temperature), self._active(rows.canvas, rows.shift)
-        )
-        canvas, done = self.move(rows.canvas, rows.step, rows.shift, rows.width, *stats)
-        return replace(rows, canvas=canvas), done
+    def active(self, rows: CanvasRows) -> torch.Tensor:
+        return self._active(rows.canvas, rows.shift)
 
     def _active(self, canvas: torch.Tensor, shift: torch.Tensor) -> torch.Tensor:
         masked = canvas == self.mask_id

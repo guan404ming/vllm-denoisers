@@ -3,9 +3,9 @@ from dataclasses import replace
 import torch
 
 from denoisers.canvas.transition import CanvasRows
+from denoisers.policies.interface import ScoreMovePolicy
 from denoisers.policies.sampling import draws, select_unmask, shift_rows
 from denoisers.policies.stats import nucleus_bag, row_stats
-from denoisers.scheduler import probe
 
 
 def transfer_ratios(steps: int, eps: float) -> torch.Tensor:
@@ -45,9 +45,10 @@ def nucleus_stats(
     return x0.view(logits.shape[:-1]), entropy.view(logits.shape[:-1])
 
 
-class Dream:
+class Dream(ScoreMovePolicy):
     shifted = True
     causal_prefill = False
+
     def __init__(
         self,
         mask_id: int,
@@ -64,7 +65,7 @@ class Dream:
         self.last = (self.table < 1).sum(dim=-1)
 
     @classmethod
-    def from_config(cls, config) -> "Dream":
+    def from_config(cls, config, model) -> "Dream":
         return cls(
             mask_id=config.mask_token_id,
             block_length=config.canvas_length,
@@ -74,15 +75,18 @@ class Dream:
             top_p=config.top_p,
         )
 
+    def active(self, rows: CanvasRows) -> torch.Tensor | None:
+        if self.dense_scores:
+            return None
+        masked = rows.canvas == self.mask_id
+        need = torch.cat([masked[:, 1:], torch.zeros_like(masked[:, :1])], dim=1)
+        need[:, 0] |= masked[:, 0]
+        return need
+
     def __call__(
         self, logits: torch.Tensor, rows: CanvasRows
     ) -> tuple[CanvasRows, torch.Tensor]:
-        masked = rows.canvas == self.mask_id
-        need = None
-        if not probe.enabled:
-            need = torch.cat([masked[:, 1:], torch.zeros_like(masked[:, :1])], dim=1)
-            need[:, 0] |= masked[:, 0]
-        x0, score = self.score(logits, draws(rows, self.temperature), need)
+        x0, score = self.score(logits, draws(rows, self.temperature), self.active(rows))
         x0, score = shift_rows(x0), shift_rows(score)
         canvas, done = self.move(rows.canvas, rows.step, rows.shift, rows.width, x0, score)
         return replace(rows, canvas=canvas, entropy=-score), done

@@ -27,12 +27,13 @@ class BlockDiffusionModelState(ModelState):
         start_probe(vllm_config)
         hf_config = self.model_config.hf_config
         self.policy = model.build_policy()
-        self.aligned = getattr(self.policy, "aligned", True)
-        self.causal_commit = getattr(self.policy, "causal_commit", False)
-        self.causal_prefill = getattr(self.policy, "causal_prefill", True)
+        self.policy.dense_scores = probe.enabled
+        self.aligned = self.policy.aligned
+        self.causal_commit = self.policy.causal_commit
+        self.causal_prefill = self.policy.causal_prefill
         self.prune = getattr(hf_config, "prune_committed", False)
         self.prune_refresh = getattr(hf_config, "prune_refresh", 0)
-        hidden_size = getattr(self.policy, "hidden_size", None)
+        hidden_size = self.policy.hidden_size
         if self.prune and hidden_size is not None:
             raise ValueError("prune_committed does not support self-conditioning policies.")
         self.state = CanvasState(

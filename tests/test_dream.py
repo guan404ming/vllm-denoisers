@@ -5,9 +5,8 @@ import pytest
 import torch
 from denoisers.models.dream.config import DreamConfig
 from denoisers.models.dream.tokenizer import DreamTokenizer
-from denoisers.policies import build
+from denoisers.policies import POLICIES
 from denoisers.policies.dream import Dream, nucleus_stats, ratio_table, transfer_ratios
-from denoisers.scheduler import probe
 from support import make_rows
 from transformers import Qwen2TokenizerFast
 
@@ -105,7 +104,7 @@ def test_sampled_policy_reads_only_rows_that_predict_masked_positions():
     assert (rows.canvas[0, 3:] != MASK).all()
 
 
-def test_probe_keeps_entropy_on_every_row(monkeypatch):
+def test_dense_scores_keep_entropy_on_every_row():
     gen = torch.Generator().manual_seed(0)
     policy = Dream(MASK, BLOCK, BLOCK)
     canvas = torch.full((1, BLOCK), MASK)
@@ -113,7 +112,7 @@ def test_probe_keeps_entropy_on_every_row(monkeypatch):
     logits = torch.randn(1, BLOCK, VOCAB, generator=gen)
     rows, _ = policy(logits, make_rows(canvas, step=[0], shift=[3]))
     assert (rows.entropy[0, 1:3] == 0).all()
-    monkeypatch.setattr(probe, "enabled", True)
+    policy.dense_scores = True
     rows, _ = policy(logits, make_rows(canvas, step=[0], shift=[3]))
     assert (rows.entropy[0, 1:3] > 0).all()
 
@@ -160,7 +159,7 @@ def test_checkpoint_config_gets_canvas_defaults(tmp_path: Path):
     assert cfg.denoise_steps is None
     assert cfg.vocab_size == 152064 and cfg.num_key_value_heads == 4
     cfg.denoise_steps = cfg.canvas_length
-    policy = build(cfg.decode_policy, cfg)
+    policy = POLICIES[cfg.decode_policy].from_config(cfg, None)
     assert policy.table.shape == (257, 256)
     assert policy.last[256] == 255 and policy.last[172] == 171
 
