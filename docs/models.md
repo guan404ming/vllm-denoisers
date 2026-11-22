@@ -8,7 +8,9 @@
 - `--generation-config vllm`: when `generation_config.json` sets a temperature. vLLM rejects diffusion requests whose temperature is not 1.0.
 - `--quantization fp8_per_tensor`: about +30% on dense SDAR at canvas 32, same GSM8K score.
 - `--compilation-config '{"max_cudagraph_capture_size": N}'` with N at least `max_num_seqs * canvas_length`: a step forwards batch times canvas tokens, so past vLLM's default of 512 it runs eagerly. Small models gain most.
-- `--hf-overrides '{"fp8_lm_head": true}'`: fp8 LM head on Ada and newer. +7% on SDAR-8B at canvas 4, no gain on LLaDA2.0-mini. On by default for DiffusionGemma.
+- Omit `lm_head_quantization` to keep vLLM's LM head. Set it through `--hf-overrides` to quantize a copy of an unquantized output head. Shared input embeddings keep their original weights.
+- `--hf-overrides '{"lm_head_quantization": "fp8"}'` uses FP8 weights and activations on Ada and newer. Tests measured a 7% gain on SDAR-8B at canvas 4 and no gain on LLaDA2.0-mini.
+- `--hf-overrides '{"lm_head_quantization": "int4"}'` uses packed INT4 weights with BF16 activations on Ampere and newer. The input width must be divisible by the group size of 32. Each local vocabulary shard needs a multiple of eight rows.
 - `--hf-overrides '{"kv_policy": "masked"}'`: turns off async scheduling, which every other configuration keeps on by default (+24% on SDAR-8B at batch 32). A denoise step forwards only the positions that were still masked at the previous step; committed positions keep their cached K/V until the commit step recomputes the block. `kv_refresh: N` recomputes the whole block every N steps. LLaDA-8B commits left to right and works with `kv_refresh: 32`; Dream commits anywhere in the canvas and needs `kv_refresh: 8`. `"kv_policy": "window"` forwards only the current sub-block of `llada` and `fast_dllm`; see [extending.md](extending.md) and [results.md](results.md).
 
 ## LLaDA2 (BailingMoeV2)

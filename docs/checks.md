@@ -8,7 +8,7 @@ uv run ruff format --check .
 uv run ruff check .
 ```
 
-GPU-only tests (kernels, fp8 head, vLLM parity) skip without CUDA or vLLM.
+GPU-only tests (kernels, quantized LM heads, vLLM parity) skip without CUDA or vLLM.
 
 ## Parity and GSM8K on Modal
 

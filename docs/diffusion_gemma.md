@@ -6,7 +6,7 @@ Ported from vLLM's native implementation onto the canvas runtime: entropy-bound 
 
 - One Triton pass over bf16 logits computes argmax, entropy, and a categorical sample. The softcap is fused in; the sample is one inverse-CDF draw per row instead of Gumbel noise per element.
 - Self-conditioning uses the tokens with probability at least 1e-3, at most 128 per position (about 96% of the mass), through `embedding_bag`. `--hf-overrides '{"sparse_self_conditioning": false}'` restores the dense `probs @ embed` product.
-- The LM head runs in fp8 on Ada and newer. `--hf-overrides '{"fp8_lm_head": false}'` turns it off.
+- The LM head uses vLLM's default. Select FP8 or INT4 through the [common model flags](models.md#common-flags).
 - Commit rows skip the LM head.
 - Logprobs come from the converging denoise step with the schedule temperature applied. The commit forward is causal and does not predict the canvas.
 - Mean entropy for the confidence check covers only the positions that fit before `max_model_len`.
