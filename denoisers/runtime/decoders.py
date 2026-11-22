@@ -26,7 +26,11 @@ class Decoders:
         if name not in registry.entries:
             logger.warning("Unknown decode_policy %r; using the default.", name)
             return None
-        policy = self.build(registry.entries[name])
+        try:
+            policy = self.build(registry.entries[name])
+        except Exception as error:
+            logger.warning("decode_policy %r failed to build (%s); using the default.", name, error)
+            return None
         mismatch = [a for a in STRUCTURE if getattr(policy, a) != getattr(self.default, a)]
         if mismatch:
             logger.warning("decode_policy %r differs in %s; using the default.", name, mismatch)

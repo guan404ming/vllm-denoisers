@@ -44,7 +44,7 @@ A request can pick a registered decode policy:
 SamplingParams(extra_args={"decode_policy": "joint"})
 ```
 
-Requests take registered names only. A policy whose `aligned`, `causal_prefill`, `causal_commit`, or `shifted` differs from the model default falls back to the default with a warning.
+Requests take registered names only. A policy that cannot build from the model config, or whose `aligned`, `causal_prefill`, `causal_commit`, or `shifted` differs from the model default, falls back to the default with a warning.
 
 ## KV policy
 

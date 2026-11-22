@@ -39,3 +39,4 @@ def test_requests_pick_registered_compatible_policies():
     assert decoders.groups(np.array([0, 2]))[0] == (default, None)
     assert decoders.flags(np.array([0, 1]), "commit_logits").tolist() == [True, False]
     assert not decoders.all(np.array([0, 1]), "sparse_logits")
+    assert decoders.assign(3, request("indel")) is default
