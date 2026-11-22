@@ -38,7 +38,7 @@ def inverse_index(active: torch.Tensor, widths: torch.Tensor, starts: torch.Tens
     src = torch.where(valid, starts.unsqueeze(1) + offsets, -1)
     index = torch.where(valid, active, block)
     inv = torch.full((n, block + 1), -1, dtype=active.dtype, device=active.device)
-    return inv.scatter_(1, index, src)[:, :block]
+    return inv.scatter_(1, index, src)[:, :block].contiguous()
 
 
 class KvRuntime:
