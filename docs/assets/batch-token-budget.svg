@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="158" viewBox="0 0 640 158" role="img" aria-labelledby="title desc">
+  <title id="title">Same minimum budget: 128 tokens</title>
+  <desc id="desc">Four 32-token canvases and two 64-token canvases each require a batch budget of at least 128 tokens.</desc>
+  <style>
+    :root { color-scheme: light dark; color: CanvasText; }
+    text { fill: currentColor; font-family: Inter, system-ui, sans-serif; }
+    .label { font-size: 18px; font-weight: 500; }
+    .detail { font-size: 15px; }
+    .line { fill: none; stroke: currentColor; stroke-opacity: .32; }
+    .icon { fill: none; stroke: #1976bd; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) { .icon { stroke: #53b2ff; } }
+  </style>
+  <rect class="line" x=".5" y="6" width="639" height="146" rx="12"/>
+  <path class="icon" transform="translate(22 23)" d="M1 1h18v18H1z M10 1v18 M1 10h18"/>
+  <text class="label" x="55" y="39">Same minimum budget: 128 tokens</text>
+  <text class="detail" x="24" y="77">4 sequences</text>
+  <rect class="line" x="170" y="55" width="106" height="32" rx="5"/>
+  <text class="detail" x="223" y="76" text-anchor="middle">32</text>
+  <rect class="line" x="280" y="55" width="106" height="32" rx="5"/>
+  <text class="detail" x="333" y="76" text-anchor="middle">32</text>
+  <rect class="line" x="390" y="55" width="106" height="32" rx="5"/>
+  <text class="detail" x="443" y="76" text-anchor="middle">32</text>
+  <rect class="line" x="500" y="55" width="106" height="32" rx="5"/>
+  <text class="detail" x="553" y="76" text-anchor="middle">32</text>
+  <text class="detail" x="24" y="125">2 sequences</text>
+  <rect class="line" x="170" y="103" width="216" height="32" rx="5"/>
+  <text class="detail" x="278" y="124" text-anchor="middle">64</text>
+  <rect class="line" x="390" y="103" width="216" height="32" rx="5"/>
+  <text class="detail" x="498" y="124" text-anchor="middle">64</text>
+</svg>

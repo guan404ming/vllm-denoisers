@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="156" viewBox="0 0 640 156" role="img" aria-labelledby="title desc">
+  <title id="title">One position of lookaround on each side</title>
+  <desc id="desc">With focus on positions 3 and 4 and one neighbor on each side, the next partial pass recomputes positions 2 through 5.</desc>
+  <style>
+    :root { color-scheme: light dark; color: CanvasText; }
+    text { fill: currentColor; font-family: Inter, system-ui, sans-serif; }
+    .label { font-size: 18px; font-weight: 500; }
+    .detail { font-size: 15px; }
+    .line { fill: none; stroke: currentColor; stroke-opacity: .32; }
+    .icon { fill: none; stroke: #1976bd; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) { .icon { stroke: #53b2ff; } }
+  </style>
+  <rect class="line" x=".5" y="6" width="639" height="144" rx="12"/>
+  <path class="icon" transform="translate(22 23)" d="M1 7V1h6 M13 1h6v6 M19 13v6h-6 M7 19H1v-6"/>
+  <text class="label" x="55" y="39">One position of lookaround on each side</text>
+  <text class="detail" x="24" y="77">Position</text>
+  <rect class="line" x="168" y="55" width="70" height="32" rx="5"/>
+  <text class="detail" x="203" y="76" text-anchor="middle">1</text>
+  <rect class="line" x="242" y="55" width="70" height="32" rx="5"/>
+  <text class="detail" x="277" y="76" text-anchor="middle">2</text>
+  <rect class="line" x="316" y="55" width="70" height="32" rx="5"/>
+  <text class="detail" x="351" y="76" text-anchor="middle">3</text>
+  <rect class="line" x="390" y="55" width="70" height="32" rx="5"/>
+  <text class="detail" x="425" y="76" text-anchor="middle">4</text>
+  <rect class="line" x="464" y="55" width="70" height="32" rx="5"/>
+  <text class="detail" x="499" y="76" text-anchor="middle">5</text>
+  <rect class="line" x="538" y="55" width="70" height="32" rx="5"/>
+  <text class="detail" x="573" y="76" text-anchor="middle">6</text>
+  <text class="detail" x="24" y="123">Window</text>
+  <rect class="line" x="168" y="101" width="70" height="32" rx="5"/>
+  <text class="detail" x="203" y="122" text-anchor="middle">Reuse</text>
+  <rect class="icon" x="242" y="101" width="70" height="32" rx="5"/>
+  <text class="detail" x="277" y="122" text-anchor="middle">Before</text>
+  <rect class="icon" x="316" y="101" width="70" height="32" rx="5"/>
+  <text class="detail" x="351" y="122" text-anchor="middle">Focus</text>
+  <rect class="icon" x="390" y="101" width="70" height="32" rx="5"/>
+  <text class="detail" x="425" y="122" text-anchor="middle">Focus</text>
+  <rect class="icon" x="464" y="101" width="70" height="32" rx="5"/>
+  <text class="detail" x="499" y="122" text-anchor="middle">After</text>
+  <rect class="line" x="538" y="101" width="70" height="32" rx="5"/>
+  <text class="detail" x="573" y="122" text-anchor="middle">Reuse</text>
+</svg>

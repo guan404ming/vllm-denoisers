@@ -2,11 +2,15 @@
 
 For models that use the shared token canvas, reserve one canvas per concurrent sequence.
 
+[![Four 32-token canvases and two 64-token canvases each require a batch budget of at least 128 tokens.](assets/batch-token-budget.svg){ width="100%" }](assets/batch-token-budget.svg)
+
 | Setting | Rule |
 | --- | --- |
 | Batch token budget | Set `--max-num-batched-tokens` to at least `max_num_seqs × canvas_length`. Lower `--max-num-seqs` to fit a larger canvas. |
 | Prefix caching | For aligned policies, set `--block-size` and any explicit `--prefix-match-unit` to multiples of the canvas length. |
-| Chunked prefill | For aligned policies, pass `--no-enable-chunked-prefill` or use a [canvas-aware scheduler](scheduling.md). |
+| Chunked prefill | With chunked prefill enabled, aligned policies automatically split intermediate chunks at canvas boundaries. The final chunk can be shorter. A custom scheduler must support this alignment. |
+
+[![One 64-token cache block spans two complete 32-token canvases.](assets/cache-block-alignment.svg){ width="100%" }](assets/cache-block-alignment.svg)
 
 ## Shared runtime settings
 

@@ -1,9 +1,11 @@
 # Contributor guide
 
-| Task | Guide |
-| --- | --- |
-| Trace a request from the vLLM worker to the sampler | [Runtime architecture](architecture.md) |
-| Implement a decode, KV, input, or hold policy | [Extend the plugin](extending.md) |
-| Register a model family | [Model registration](extending.md#register-a-model-family) |
-| Check a change locally or compare with a reference | [Testing](testing.md) |
-| Measure a change under load | [Benchmarking](benchmarking.md) |
+## Development
+
+- [Runtime architecture](architecture.md) · Trace a request from the vLLM worker through the sampler to token emission.
+- [Extend the plugin](extending.md) · Implement a policy or [register a model family](extending.md#register-a-model-family).
+
+## Validation
+
+- [Testing](testing.md) · Run local checks, compare tokens and answers with a reference, and verify vLLM upgrades.
+- [Benchmarking](benchmarking.md) · Compare serving configurations on the same workload and measure latency, throughput, and goodput.

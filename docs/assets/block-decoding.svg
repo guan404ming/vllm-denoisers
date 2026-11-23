@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="320" viewBox="0 0 800 320" role="img" aria-labelledby="title desc">
+  <title id="title">Token-canvas decoding</title>
+  <desc id="desc">For a six-token prompt and a four-position canvas, prompt tokens P5 and P6 share a block with two response positions. In this example, denoising fills one mask at a time. The model emits A and B when the block is ready.</desc>
+  <style>
+    :root { color-scheme: light dark; color: CanvasText; }
+    text { font-family: Inter, system-ui, sans-serif; fill: currentColor; }
+    .panel, .cell { fill: none; stroke: currentColor; stroke-opacity: .32; }
+    .icon, .wire { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .wire { stroke-opacity: .5; }
+    .heading { font-size: 18px; font-weight: 500; }
+    .token { font-size: 15px; text-anchor: middle; }
+  </style>
+  <defs>
+    <rect id="cell" class="cell" width="58" height="36" rx="7"/>
+    <g id="prompt">
+      <use href="#cell"/>
+      <use href="#cell" x="66"/>
+    </g>
+  </defs>
+  <g class="panel">
+    <rect x=".5" y="8" width="799" height="80" rx="12"/>
+    <rect x=".5" y="120" width="799" height="80" rx="12"/>
+    <rect x=".5" y="232" width="799" height="80" rx="12"/>
+  </g>
+  <path class="wire" d="M400 92v22m-4-4 4 4 4-4 M400 204v22m-4-4 4 4 4-4"/>
+  <g transform="translate(28 36)">
+    <path class="icon" d="M2 1h15l5 5v17H2z M7 10h10 M7 15h7"/>
+    <text class="heading" x="38" y="19">Prefill</text>
+  </g>
+  <g transform="translate(28 148)">
+    <path class="icon" d="M3 11a10 10 0 1 1 2 9 M3 4v7h7"/>
+    <text class="heading" x="38" y="19">Denoise</text>
+  </g>
+  <g transform="translate(28 260)">
+    <circle class="icon" cx="12" cy="12" r="10"/>
+    <path class="icon" d="m7 12 3.5 3.5 7-8"/>
+    <text class="heading" x="38" y="19">Commit</text>
+  </g>
+  <g transform="translate(516 30)" class="token">
+    <use href="#prompt"/>
+    <use href="#cell" x="132" stroke-dasharray="4 3"/>
+    <use href="#cell" x="198" stroke-dasharray="4 3"/>
+    <text y="23"><tspan x="29">P5</tspan><tspan x="95">P6</tspan><tspan x="161">mask</tspan><tspan x="227">mask</tspan></text>
+  </g>
+  <g transform="translate(516 142)" class="token">
+    <use href="#prompt"/>
+    <use href="#cell" x="132"/>
+    <use href="#cell" x="198" stroke-dasharray="4 3"/>
+    <text y="23"><tspan x="29">P5</tspan><tspan x="95">P6</tspan><tspan x="161">A</tspan><tspan x="227">mask</tspan></text>
+  </g>
+  <g transform="translate(516 254)" class="token">
+    <use href="#prompt"/>
+    <use href="#cell" x="132"/>
+    <use href="#cell" x="198"/>
+    <text y="23"><tspan x="29">P5</tspan><tspan x="95">P6</tspan><tspan x="161">A</tspan><tspan x="227">B</tspan></text>
+  </g>
+</svg>

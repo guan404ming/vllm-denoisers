@@ -1,10 +1,17 @@
-# SDAR and TraDo
+---
+icon: model-org
+organization: JetLM
+---
+
+# [![](../assets/orgs/JetLM.webp){ .org-avatar width="30" height="30" }](https://huggingface.co/collections/JetLM/sdar){ aria-label="SDAR models on Hugging Face" target="_blank" rel="noopener" } SDAR
+
+[JetLM/SDAR](https://huggingface.co/collections/JetLM/sdar){ target="_blank" rel="noopener" }
 
 ## Serve
 
 ```bash
 vllm serve JetLM/SDAR-1.7B-Chat \
-  --attention-backend TRITON_ATTN --block-size 16 --no-enable-chunked-prefill \
+  --attention-backend TRITON_ATTN --block-size 16 \
   --generation-config vllm
 ```
 
@@ -18,4 +25,4 @@ vllm serve JetLM/SDAR-1.7B-Chat \
 ## Notes
 
 - For `JetLM/SDAR-1.7B-Chat-b32`, pass `--hf-overrides '{"canvas_length":32}' --block-size 32`.
-- The same adapter supports SDAR MoE (30B-A3B) and TraDo (e.g., `Gen-Verse/TraDo-8B-Instruct`).
+- The SDAR MoE adapter supports the 30B-A3B family.

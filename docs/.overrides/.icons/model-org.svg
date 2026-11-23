@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18" class="org-avatar" aria-hidden="true">
+  <image href="{{ ('assets/orgs/' ~ nav_item.meta.organization ~ '.webp') | url }}" width="18" height="18"/>
+</svg>

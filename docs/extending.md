@@ -11,6 +11,8 @@ Each policy registry accepts a short name or an importable class path in the ser
 
 ## Decode policy
 
+[![The policy reads logits and current canvas rows and returns updated rows and a done flag for each request.](assets/decode-policy-contract.svg){ width="100%" }](assets/decode-policy-contract.svg)
+
 Implement `DecodePolicy.from_config(config, model)` and `__call__(logits, rows)`. Return updated `CanvasRows` and a `StepResult`. Set `done` for rows ready to commit. To reuse token sampling and prefix exit, subclass `ScoreMovePolicy` and implement `score` and `move`. A policy that needs previous steps can request a history window with `history_length`.
 
 To seed the first generated position, implement `prefill_seed(logits)`. It receives raw logits of shape `[rows, vocab_size]` from the last prompt token of each request that finished prefill. Return one token ID per row. Later blocks use `next_seed`.
@@ -42,5 +44,7 @@ Implement `rank(candidates, now, scores)`. Return request IDs in priority order.
 ## Register a model family
 
 For a model that shares the canvas runtime, add the `DecodeConfig` mixin to its Hugging Face config and the `BlockDiffusionModel` mixin to its model class. Call `register_family(architecture, model_path, config_class)` from plugin initialization. Pass a tokenizer or verifier if the checkpoint requires one. Use the [SDAR adapter](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/models/sdar/model.py) and [family registrations](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/models/families.py) as examples.
+
+[![SDARForCausalLM selects the vLLM model adapter, and the config model type selects SDARConfig in Transformers.](assets/family-registration.svg){ width="100%" }](assets/family-registration.svg)
 
 For an image encoder, return one tensor per image from `embed_multimodal()`. The default `image_encoder_output = "embeddings"` merges its rows into the prompt at the processor's selected positions. Set `image_encoder_output = "token_ids"` on the model for discrete visual tokens. Return integer vocabulary IDs with shape `[num_image_tokens, 1]`. The runtime writes them into the current input and request history so a later block can reuse the prompt tail.

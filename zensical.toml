@@ -3,26 +3,48 @@ site_name = "vllm-denoisers"
 site_url = "https://guan404ming.github.io/vllm-denoisers/"
 repo_url = "https://github.com/guan404ming/vllm-denoisers"
 repo_name = "guan404ming/vllm-denoisers"
+extra_css = ["stylesheets/models.css"]
 nav = [
-    { "Home" = "index.md" },
-    { "User guide" = [{ "Overview" = "user-guide.md" }, "installation.md", "quickstart.md", "how-it-works.md"] },
+    { "Home" = [
+        { "Overview" = "index.md" },
+        { "Getting Started" = ["installation.md", "quickstart.md"] },
+    ] },
+    { "User guide" = [
+        { "Overview" = "user-guide.md" },
+        { "Core Concepts" = ["how-it-works.md", "decode-policies.md"] },
+        { "Serving" = ["serving.md", "scheduling.md", "kv-cache.md"] },
+    ] },
     { "Models" = [
         { "Overview" = "models.md" },
-        "models/diffusion-gemma.md",
-        "models/dream.md",
-        "models/fast-dllm-v2.md",
-        "models/llada.md",
-        "models/llada2.md",
-        "models/nemotron-labs-diffusion.md",
-        "models/nemotron-labs-sigma.md",
-        "models/sdar-trado.md",
-        "models/stable-diffcoder.md",
+        { "Token-canvas models" = [
+            "models/diffusion-gemma.md",
+            "models/dream.md",
+            "models/fast-dllm-v2.md",
+            "models/llada.md",
+            "models/llada2.md",
+            "models/nemotron-labs-diffusion.md",
+            "models/sdar-trado.md",
+            "models/stable-diffcoder.md",
+            "models/trado.md",
+        ] },
+        { "Continuous-latent models" = ["models/nemotron-labs-sigma.md"] },
     ] },
-    { "Serving" = ["serving.md", "scheduling.md", "kv-cache.md"] },
-    { "Benchmarking" = "benchmarking.md" },
-    { "Contributor guide" = [{ "Overview" = "contributor-guide.md" }, "architecture.md", "extending.md", "testing.md"] },
+    { "Components" = [
+        { "Overview" = "components/index.md" },
+        "components/schedulers.md",
+        "components/decode.md",
+        "components/kv.md",
+        "components/input.md",
+        "components/hold.md",
+    ] },
+    { "Contributor guide" = [
+        { "Overview" = "contributor-guide.md" },
+        { "Development" = ["architecture.md", "extending.md"] },
+        { "Validation" = ["testing.md", "benchmarking.md"] },
+    ] },
 ]
 [project.theme]
+custom_dir = "docs/.overrides"
 logo = "assets/denoisers.svg"
 favicon = "assets/denoisers.svg"
 features = ["navigation.tabs", "navigation.sections", "navigation.path", "navigation.footer", "content.code.copy"]

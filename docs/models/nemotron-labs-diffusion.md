@@ -1,12 +1,30 @@
-# Nemotron Labs Diffusion
+---
+icon: model-org
+organization: nvidia
+---
+
+# [![](../assets/orgs/nvidia.webp){ .org-avatar width="30" height="30" }](https://huggingface.co/collections/nvidia/nemotron-labs-diffusion){ aria-label="Nemotron Labs Diffusion models on Hugging Face" target="_blank" rel="noopener" } Nemotron Labs Diffusion
+
+[nvidia/Nemotron-Labs-Diffusion](https://huggingface.co/collections/nvidia/nemotron-labs-diffusion){ target="_blank" rel="noopener" }
 
 ## Serve
 
 ```bash
-VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Diffusion-3B \
+vllm serve nvidia/Nemotron-Labs-Diffusion-3B \
   --attention-backend TRITON_ATTN --block-size 32 --max-model-len 2048 \
   --max-num-seqs 4 --max-num-batched-tokens 2048 --generation-config vllm
 ```
+
+## Image input
+
+```bash
+vllm serve nvidia/Nemotron-Labs-Diffusion-VLM-8B \
+  --attention-backend TRITON_ATTN --block-size 32 \
+  --max-model-len 8192 --max-num-seqs 4 --max-num-batched-tokens 8192 --generation-config vllm
+```
+
+- Send `image_url` and `text` items in the user message’s `content` array to `POST /v1/chat/completions`. The model returns text.
+- The Pixtral encoder processes the image. Each unseeded 32-token response block starts fully masked.
 
 ## Decoding
 
@@ -19,5 +37,4 @@ VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Diffusion-3B \
 ## Notes
 
 - For one token per step, pass `--hf-overrides '{"confidence_threshold":null}'`.
-- Use the V2 model runner for text. See the [checkpoint example](https://huggingface.co/nvidia/Nemotron-Labs-Diffusion-3B#chat-with-our-model).
-- For image prompts, use the [8B VLM checkpoint](../models.md#image-understanding). Its unseeded response blocks start fully masked.
+- See the [text checkpoint example](https://huggingface.co/nvidia/Nemotron-Labs-Diffusion-3B#chat-with-our-model).

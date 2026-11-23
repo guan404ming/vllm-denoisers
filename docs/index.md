@@ -6,6 +6,8 @@ Use vLLM to serve models that generate text by refining a block of tokens over s
 
 [![The scheduler selects requests for model adapters. Token-canvas models use decode policies and optional KV reuse. The shared sampler reports emitted tokens to vLLM.](assets/components.svg)](assets/components.svg)
 
+[Browse configurable components](components/index.md).
+
 ## How it works
 
 [![Token-canvas and continuous-latent models share a canvas sampler. Unfinished blocks return to the scheduler, and completed blocks emit tokens.](assets/architecture.svg)](assets/architecture.svg)

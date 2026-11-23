@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160" role="img" aria-labelledby="title desc">
+  <title id="title">Two controlled comparisons</title>
+  <desc id="desc">Compare native with plugin to measure the runtime change. Compare probe with sjf to measure the active limit with the same scheduler and probe.</desc>
+  <style>
+    :root { color-scheme: light dark; color: CanvasText; }
+    text { fill: currentColor; font-family: Inter, system-ui, sans-serif; }
+    .label { font-size: 18px; font-weight: 500; }
+    .detail { font-size: 15px; }
+    .line { fill: none; stroke: currentColor; stroke-opacity: .32; }
+    .icon { fill: none; stroke: #1976bd; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) { .icon { stroke: #53b2ff; } }
+  </style>
+  <rect class="line" x=".5" y="6" width="639" height="148" rx="12"/>
+  <path class="icon" transform="translate(22 23)" d="M2 10h7m0 0V3h10m-10 7v7h10"/>
+  <text class="label" x="55" y="39">Two controlled comparisons</text>
+  <text class="detail" x="24" y="79">Runtime</text>
+  <rect class="line" x="160" y="57" width="119" height="32" rx="5"/>
+  <text class="detail" x="219.5" y="78" text-anchor="middle">native</text>
+  <path class="line" d="M285 73h24m-5-5 5 5-5 5"/>
+  <rect class="line" x="316" y="57" width="119" height="32" rx="5"/>
+  <text class="detail" x="375.5" y="78" text-anchor="middle">plugin</text>
+  <text class="detail" x="449" y="79">Enable the plugin</text>
+  <text class="detail" x="24" y="127">Active limit</text>
+  <rect class="line" x="160" y="105" width="119" height="32" rx="5"/>
+  <text class="detail" x="219.5" y="126" text-anchor="middle">probe</text>
+  <path class="line" d="M285 121h24m-5-5 5 5-5 5"/>
+  <rect class="line" x="316" y="105" width="119" height="32" rx="5"/>
+  <text class="detail" x="375.5" y="126" text-anchor="middle">sjf</text>
+  <text class="detail" x="449" y="127">32 to 16 active</text>
+</svg>
