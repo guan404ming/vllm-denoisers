@@ -64,7 +64,8 @@
 
   <g transform="translate(100 401) scale(.5)" aria-hidden="true">
     <path fill="#FDB616" d="M1 19h17v34Z"/>
-    <path fill="#30A3FF" fill-rule="evenodd" d="M18 53l9-35 16-8-11.5 43Z M45 13c11 0 18 7 18 17 0 14-10 23-24 23h-5l2.5-9H39c9 0 15-5 15-14 0-5-3-9-11.5-9Z"/>
+    <path fill="#30A3FF" d="M18 53l9-35 16-8-11.5 43Z"/>
+    <path fill="#30A3FF" d="M46 10h3c13 0 21 8 21 19 0 14-11 24-27 24h-8.5l3-11H43c9 0 15-5 15-13 0-5-4-8-11-8h-4Z"/>
   </g>
   <text class="heading" x="140" y="424">Shared canvas sampler</text>
   <text class="detail" x="100" y="455">Report output token count per request</text>
