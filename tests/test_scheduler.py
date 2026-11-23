@@ -6,7 +6,7 @@ import torch
 
 from denoisers.policies.hold import Aging, ShortestFirst
 from denoisers.scheduler import probe
-from denoisers.scheduler.active import DynamicActive
+from denoisers.scheduler.active import WINDOW, DecodeTimings, DynamicActive
 
 
 def test_mean_entropy_counts_only_selected_positions():
@@ -62,18 +62,40 @@ def test_probe_waits_for_scores_on_the_copy_stream(tmp_path):
     assert table.read(["first"]) == {"first": 2.0}
 
 
-@pytest.mark.parametrize(
-    ("count", "cap"), [(8, 8), (9, 8), (10, 8), (17, 16), (18, 18), (19, 16), (32, 32)]
-)
-def test_dynamic_active_limits_only_profiled_decode_batches(count, cap):
-    requests = [
-        SimpleNamespace(request_id=str(i), arrival_time=1, num_output_tokens=0)
-        for i in range(count)
-    ]
-    limit = DynamicActive()
-    policy = ShortestFirst()
-    assert limit.held(requests, False, policy, {}, 0, 1) == set()
-    assert limit.held(requests, True, policy, {}, 0, 1) == {str(i) for i in range(cap, count)}
+def observe(timings, size, duration, steps=WINDOW):
+    for _ in range(steps):
+        step = object()
+        start = timings.last_completion
+        timings.submitted(step, size, start)
+        timings.completed(step, start + duration)
+
+
+def test_limit_learns_local_costs_and_rechecks_the_full_batch():
+    timings = DecodeTimings()
+    observe(timings, 6, 6)
+    observe(timings, 11, 12, WINDOW - 1)
+    assert timings.target(11) == 11
+    observe(timings, 11, 12, 1)
+    assert [timings.target(11) for _ in range(WINDOW)] == [6] * (WINDOW - 1) + [11]
+    observe(timings, 11, 8)
+    assert timings.target(11) == 11
+    observe(timings, 6, 4)
+    assert timings.target(11) == 6
+
+
+def test_overlap_uses_completion_spacing_only_for_matching_batches():
+    timings = DecodeTimings()
+    a, b, c, prefill = (object() for _ in range(4))
+    timings.submitted(a, 6, 1)
+    timings.submitted(b, 6, 2)
+    timings.submitted(c, 11, 3)
+    timings.completed(a, 10)
+    timings.completed(b, 14)
+    timings.completed(c, 20)
+    timings.completed(prefill, 25)
+    assert list(timings.samples[6]) == [9, 4]
+    assert 11 not in timings.samples
+    assert not timings.pending
 
 
 def test_dynamic_active_protects_service_and_block_progress():
@@ -82,7 +104,10 @@ def test_dynamic_active_protects_service_and_block_progress():
     ]
     limit = DynamicActive()
     policy = ShortestFirst()
+    observe(limit.timings, 8, 8)
+    observe(limit.timings, 10, 10)
     requests[9].arrival_time = 6
+    assert not limit.held(requests, False, policy, {}, 0, 10)
     requests[8].num_output_tokens = 32
     assert limit.held(requests, True, policy, {}, 0, 10) == {"7", "8"}
     limit.record_scheduled([str(i) for i in range(7)] + ["9"], 0.11)

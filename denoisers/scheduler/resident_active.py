@@ -2,6 +2,7 @@ import os
 import time
 
 from vllm.logger import init_logger
+from vllm.v1.core.sched.diffusion_scheduler import diffusion_canvas_width
 
 from denoisers.policies.hold import PRIOR, registry
 from denoisers.scheduler import probe
@@ -51,6 +52,10 @@ class ResidentActiveScheduler(AlignedScheduler):
                 not self.waiting
                 and not self.kv_holding_waiting
                 and len(decode) == len(self.running)
+                and all(
+                    diffusion_canvas_width(r, self.num_spec_tokens) == self.num_spec_tokens
+                    for r in decode
+                )
             )
             hold = self.dynamic.held(decode, can_hold, self.hold, scores, now, wall_time)
         for r in decode:
@@ -72,8 +77,23 @@ class ResidentActiveScheduler(AlignedScheduler):
             )
         result = super().schedule(throttle_prefills)
         if self.dynamic is not None:
-            self.dynamic.record_scheduled(result.num_scheduled_tokens, now)
+            scheduled = result.num_scheduled_tokens
+            self.dynamic.record_scheduled(scheduled, now)
+            if (
+                can_hold
+                and scheduled
+                and all(
+                    rid in self.dynamic.progress and tokens == self.num_spec_tokens
+                    for rid, tokens in scheduled.items()
+                )
+            ):
+                self.dynamic.timings.submitted(result, len(scheduled), time.monotonic())
         return result
+
+    def update_from_output(self, scheduler_output, model_runner_output):
+        if self.dynamic is not None:
+            self.dynamic.timings.completed(scheduler_output, time.monotonic())
+        return super().update_from_output(scheduler_output, model_runner_output)
 
 
 class DenoisersScheduler(ResidentActiveScheduler):

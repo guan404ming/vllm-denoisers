@@ -17,7 +17,9 @@ vllm serve inclusionAI/LLaDA2.0-mini \
 
 ResAct defaults to shortest-first ranking and an automatic active limit. This example allows up to 32 resident sequences. To reproduce fixed-limit scheduling, set `DENOISERS_ACTIVE=16`. For synchronous scheduling, add `--no-async-scheduling`.
 
-The automatic limit uses a profile measured on Fast-dLLM v2 7B with one H200. With 9 or 10 decoding requests, it targets 8 active requests. With 17 or 19, it targets 16. At other batch sizes, during prefill, or while requests wait for admission, ResAct lets all candidates advance.
+Each scheduler starts with all decoding requests active. It measures completed decode-only steps at the model's configured canvas width. After 20 samples at both sizes, it can select a smaller observed batch if its median step is faster and retains at least 97% of the full batch’s decode rate. The rate is the number of requests advanced per step divided by median step time. The scheduler uses the latest 20 samples per size and retries the full batch every 20th eligible decision.
+
+During prefill, with requests waiting for admission, or with a non-default canvas width, the scheduler lets all candidates advance. For overlapping steps, it measures the time between completions only when consecutive batches have the same size.
 
 Requests keep priority after 100 ms without a scheduled step, 1.5 s without another output block, or 3.75 s from arrival without a first block. These protections can raise the active count above the target.
 
