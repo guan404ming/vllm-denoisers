@@ -6,6 +6,7 @@ from denoisers.policies.decode.interface import DecodePolicy, ScoreMovePolicy, r
 from denoisers.policies.decode.joint import JointThreshold
 from denoisers.policies.decode.llada import LLaDA
 from denoisers.policies.decode.low_confidence import LowConfidence
+from denoisers.policies.decode.nemotron import NemotronDiffusion
 
 register = registry.register
 
@@ -18,6 +19,7 @@ __all__ = [
     "JointThreshold",
     "LLaDA",
     "LowConfidence",
+    "NemotronDiffusion",
     "ScoreMovePolicy",
     "register",
     "registry",
