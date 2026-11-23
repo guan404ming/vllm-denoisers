@@ -1,4 +1,4 @@
-# <sub><img src="docs/assets/denoisers.svg" width="44" height="44" alt=""></sub>&#x2004;vllm-denoisers
+# <sup><img src="docs/assets/denoisers.svg" width="52" height="52" align="middle" alt=""></sup> vllm-denoisers
 
 [![Documentation CI](https://github.com/guan404ming/vllm-denoisers/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/guan404ming/vllm-denoisers/actions/workflows/docs.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
