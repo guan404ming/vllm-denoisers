@@ -1,6 +1,6 @@
 # Hold policies
 
-With a resident/active scheduler, set `DENOISERS_HOLD` to choose a `HoldPolicy`. For example, `DENOISERS_HOLD=aging DENOISERS_AGE_S=2` increases priority with wait time. `DENOISERS_ACTIVE` sets how many resident requests can advance.
+With a resident/active scheduler, set `DENOISERS_HOLD` to choose a `HoldPolicy`. For example, `DENOISERS_HOLD=aging DENOISERS_AGE_S=2` increases priority with wait time. ResAct chooses the active limit automatically. Set `DENOISERS_ACTIVE` to a positive integer for a fixed limit. See [Request scheduling](../scheduling.md).
 
 | Registered name | Class | Direct base | Behavior |
 | --- | --- | --- | --- |

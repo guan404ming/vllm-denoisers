@@ -126,3 +126,18 @@ def test_scheduler_short_names_follow_final_mode(monkeypatch, name, async_mode, 
     scheduler.async_scheduling = async_mode
     monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
     assert type(scheduler.get_scheduler_cls()(vllm_config=config)) is expected
+
+
+@pytest.mark.parametrize("active", [None, "auto", "16"])
+def test_resact_active_setting(monkeypatch, active):
+    config, _ = make_config()
+    config.instance_id = "active-limit-test"
+    config.parallel_config.data_parallel_rank = 0
+    monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
+    if active is None:
+        monkeypatch.delenv("DENOISERS_ACTIVE", raising=False)
+    else:
+        monkeypatch.setenv("DENOISERS_ACTIVE", active)
+    scheduler = DenoisersScheduler(vllm_config=config)
+    assert (scheduler.dynamic is None) == (active == "16")
+    assert scheduler.active == (16 if active == "16" else None)

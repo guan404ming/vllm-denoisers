@@ -9,13 +9,17 @@ Use the optional resident/active scheduler to give some decoding requests priori
 ## Enable shortest-first scheduling
 
 ```bash
-DENOISERS_HOLD=sjf DENOISERS_ACTIVE=16 vllm serve inclusionAI/LLaDA2.0-mini \
+vllm serve inclusionAI/LLaDA2.0-mini \
   --scheduler-cls resact \
   --attention-backend TRITON_ATTN --block-size 32 --max-num-seqs 32 \
   --max-num-batched-tokens 2048 --max-model-len 2048 --generation-config vllm
 ```
 
-This example allows up to 32 sequences and advances at most 16 decoding requests per step. Prefill chunks align with the canvas. For synchronous scheduling, add `--no-async-scheduling`.
+ResAct defaults to shortest-first ranking and an automatic active limit. This example allows up to 32 resident sequences. To reproduce fixed-limit scheduling, set `DENOISERS_ACTIVE=16`. For synchronous scheduling, add `--no-async-scheduling`.
+
+The automatic limit uses a profile measured on Fast-dLLM v2 7B with one H200. With 9 or 10 decoding requests, it targets 8 active requests. With 17 or 19, it targets 16. At other batch sizes, during prefill, or while requests wait for admission, ResAct lets all candidates advance.
+
+Requests keep priority after 100 ms without a scheduled step, 1.5 s without another output block, or 3.75 s from arrival without a first block. These protections can raise the active count above the target.
 
 | Hold policy | How it ranks requests |
 | --- | --- |

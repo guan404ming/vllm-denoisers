@@ -1,10 +1,12 @@
 import math
+from types import SimpleNamespace
 
 import pytest
 import torch
 
 from denoisers.policies.hold import Aging, ShortestFirst
 from denoisers.scheduler import probe
+from denoisers.scheduler.active import DynamicActive
 
 
 def test_mean_entropy_counts_only_selected_positions():
@@ -58,3 +60,36 @@ def test_probe_waits_for_scores_on_the_copy_stream(tmp_path):
         writer.record([0], ["first"], scores, committing)
         writer.record([0], ["second"], scores, committing)
     assert table.read(["first"]) == {"first": 2.0}
+
+
+@pytest.mark.parametrize(
+    ("count", "cap"), [(8, 8), (9, 8), (10, 8), (17, 16), (18, 18), (19, 16), (32, 32)]
+)
+def test_dynamic_active_limits_only_profiled_decode_batches(count, cap):
+    requests = [
+        SimpleNamespace(request_id=str(i), arrival_time=1, num_output_tokens=0)
+        for i in range(count)
+    ]
+    limit = DynamicActive()
+    policy = ShortestFirst()
+    assert limit.held(requests, False, policy, {}, 0, 1) == set()
+    assert limit.held(requests, True, policy, {}, 0, 1) == {str(i) for i in range(cap, count)}
+
+
+def test_dynamic_active_protects_service_and_block_progress():
+    requests = [
+        SimpleNamespace(request_id=str(i), arrival_time=10, num_output_tokens=0) for i in range(10)
+    ]
+    limit = DynamicActive()
+    policy = ShortestFirst()
+    requests[9].arrival_time = 6
+    requests[8].num_output_tokens = 32
+    assert limit.held(requests, True, policy, {}, 0, 10) == {"7", "8"}
+    limit.record_scheduled([str(i) for i in range(7)] + ["9"], 0.11)
+    assert limit.held(requests, True, policy, {}, 0.12, 10.12) == {"5", "6"}
+    limit.record_scheduled([str(i) for i in range(10)], 1.51)
+    assert limit.held(requests, True, policy, {}, 1.52, 11.52) == {"6", "7"}
+    requests[8].num_output_tokens += 32
+    assert limit.held(requests, True, policy, {}, 1.53, 11.53) == {"7", "8"}
+    limit.held([], True, policy, {}, 2, 12)
+    assert not limit.progress

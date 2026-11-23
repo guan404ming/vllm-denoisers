@@ -5,12 +5,12 @@ from vllm.logger import init_logger
 
 from denoisers.policies.hold import PRIOR, registry
 from denoisers.scheduler import probe
+from denoisers.scheduler.active import DynamicActive
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
 
 logger = init_logger("vllm.denoisers")
 
 HOLD = os.environ.get("DENOISERS_HOLD", "sjf")
-ACTIVE = int(os.environ.get("DENOISERS_ACTIVE", "16"))
 
 
 class ResidentActiveScheduler(AlignedScheduler):
@@ -27,6 +27,11 @@ class ResidentActiveScheduler(AlignedScheduler):
 
     def __init__(self, vllm_config, *args, **kwargs):
         super().__init__(vllm_config, *args, **kwargs)
+        active = os.environ.get("DENOISERS_ACTIVE", "auto")
+        self.active = None if active == "auto" else int(active)
+        if self.active is not None and self.active < 1:
+            raise ValueError("DENOISERS_ACTIVE must be auto or a positive integer.")
+        self.dynamic = DynamicActive() if self.active is None else None
         self.hold = registry.resolve(HOLD).from_env()
         self.scores = probe.ScoreTable(
             probe.table_path(vllm_config), vllm_config.scheduler_config.max_num_seqs
@@ -35,9 +40,19 @@ class ResidentActiveScheduler(AlignedScheduler):
     def schedule(self, throttle_prefills=False):
         decode = [r for r in self.running if r.num_computed_tokens >= r.num_prompt_tokens]
         scores = self.scores.read([r.request_id for r in decode])
-        hold = self.hold.held(
-            [(r.request_id, r.arrival_time) for r in decode], time.time(), ACTIVE, scores
-        )
+        wall_time = time.time()
+        if self.dynamic is None:
+            hold = self.hold.held(
+                [(r.request_id, r.arrival_time) for r in decode], wall_time, self.active, scores
+            )
+        else:
+            now = time.monotonic()
+            can_hold = (
+                not self.waiting
+                and not self.kv_holding_waiting
+                and len(decode) == len(self.running)
+            )
+            hold = self.dynamic.held(decode, can_hold, self.hold, scores, now, wall_time)
         for r in decode:
             if r.request_id in hold:
                 r.next_decode_eligible_step = max(
@@ -55,7 +70,10 @@ class ResidentActiveScheduler(AlignedScheduler):
                 min(ranked),
                 max(ranked),
             )
-        return super().schedule(throttle_prefills)
+        result = super().schedule(throttle_prefills)
+        if self.dynamic is not None:
+            self.dynamic.record_scheduled(result.num_scheduled_tokens, now)
+        return result
 
 
 class DenoisersScheduler(ResidentActiveScheduler):
