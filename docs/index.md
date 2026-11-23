@@ -1,4 +1,4 @@
-# <img src="assets/denoisers.svg" width="40" height="40" alt="" style="vertical-align: -0.2em"> vllm-denoisers
+# <img src="assets/denoisers.svg" width="40" height="40" alt="" style="vertical-align: text-bottom; margin-inline-end: 0.15em"> vllm-denoisers
 
 Use vLLM to serve models that generate text by refining a block of tokens over several steps.
 

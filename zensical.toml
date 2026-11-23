@@ -1,6 +1,8 @@
 [project]
 site_name = "vllm-denoisers"
 site_url = "https://guan404ming.github.io/vllm-denoisers/"
+repo_url = "https://github.com/guan404ming/vllm-denoisers"
+repo_name = "guan404ming/vllm-denoisers"
 nav = [
     { "Home" = "index.md" },
     { "User guide" = [{ "Overview" = "user-guide.md" }, "installation.md", "quickstart.md", "how-it-works.md"] },
