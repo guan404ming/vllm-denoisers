@@ -1,8 +1,9 @@
 # <sub><img src="docs/assets/denoisers.svg" width="44" height="44" alt=""></sub>&#x2004;vllm-denoisers
 
-![vLLM schedules each denoising step. Both model families share a sampler that holds unfinished blocks and emits tokens from completed blocks.](docs/assets/architecture.svg)
-
+[![Documentation CI](https://github.com/guan404ming/vllm-denoisers/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/guan404ming/vllm-denoisers/actions/workflows/docs.yml)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
+
+![vLLM schedules each denoising step. Both model families share a sampler that holds unfinished blocks and emits tokens from completed blocks.](docs/assets/architecture.svg)
 
 Serve diffusion language models through vLLM’s OpenAI-compatible API. Each request refines a block over several steps, then emits the completed tokens.
 

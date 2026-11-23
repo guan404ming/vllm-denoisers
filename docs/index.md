@@ -19,7 +19,7 @@ Read about the [denoising steps](how-it-works.md) or trace a request through the
 | Task | Start here |
 | --- | --- |
 | Serve your first model | [Quick start](quickstart.md) |
-| Choose a checkpoint and its decoding settings | [Model guide](models.md) |
+| Choose a checkpoint and its decoding settings | [Recipes](models.md) |
 | Configure serving | [Batch limits](serving.md) · [Request scheduling](scheduling.md) · [KV cache reuse](kv-cache.md) |
 | Measure throughput, latency, and accuracy | [Benchmarking](benchmarking.md) |
-| Add a policy or model family | [Contributor guide](contributor-guide.md) |
+| Add a policy or model family | [Developer guide](contributor-guide.md) |
