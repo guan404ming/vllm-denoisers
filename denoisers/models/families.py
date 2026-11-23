@@ -9,6 +9,7 @@ from denoisers.models.fast_dllm.config import FastDLLMQwenConfig
 from denoisers.models.llada.config import LLaDAConfig
 from denoisers.models.llada2.config import LLaDA2MoeConfig
 from denoisers.models.llada2.tokenizer import CustomFastTokenizer
+from denoisers.models.nemotron_diffusion.config import NemotronLabsDiffusionConfig
 from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
 from denoisers.models.sigma.config import SigmaModelConfig
 from denoisers.models.stable_diffcoder.model import StableDiffcoderModelConfig
@@ -22,6 +23,12 @@ FAMILIES = (
         "Fast_dLLM_QwenForCausalLM",
         "fast_dllm.model:FastDLLMQwenForCausalLM",
         FastDLLMQwenConfig,
+        None,
+    ),
+    (
+        "NemotronLabsDiffusionModel",
+        "nemotron_diffusion.model:NemotronLabsDiffusionModel",
+        NemotronLabsDiffusionConfig,
         None,
     ),
     ("DreamModel", "dream.model:DreamModel", DreamConfig, DreamTokenizer),

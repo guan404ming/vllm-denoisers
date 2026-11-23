@@ -58,6 +58,18 @@ vllm serve ByteDance-Seed/Stable-DiffCoder-8B-Instruct \
 - `--diffusion-config '{"canvas_length": 32}'` changes the canvas.
 - Images, prefix caching, chunked prefill, logprobs, read extras, and TP work. See [diffusion_gemma.md](diffusion_gemma.md).
 
+## Nemotron Labs Diffusion
+
+The text adapter uses greedy diffusion with 32-token blocks. The causal prompt seeds the first block. Bidirectional attention fills masked positions. A causal pass over the completed block seeds the next one.
+
+```bash
+VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Diffusion-3B \
+  --attention-backend TRITON_ATTN --block-size 32 --max-model-len 2048 \
+  --max-num-seqs 4 --max-num-batched-tokens 2048 --generation-config vllm
+```
+
+Set `confidence_threshold` through `--hf-overrides`. The default is 0.9. Each step fills all masked positions at or above the threshold and always fills the most confident position. Set the threshold to `null` for one position per step. See [NVIDIA's diffusion example](https://huggingface.co/nvidia/Nemotron-Labs-Diffusion-3B#chat-with-our-model).
+
 ## Nemotron Labs Sigma
 
 Serve a checkpoint from the [NVIDIA Sigma collection](https://huggingface.co/collections/nvidia/nemotron-labs-sigma) on one CUDA GPU.
