@@ -1,3 +1,5 @@
+from typing import Literal
+
 from vllm.model_executor.layers.linear import UnquantizedLinearMethod
 from vllm.model_executor.layers.vocab_parallel_embedding import UnquantizedEmbeddingMethod
 
@@ -7,6 +9,8 @@ from denoisers.runtime.model_state import BlockDiffusionModelState
 
 
 class BlockDiffusionModel:
+    image_encoder_output: Literal["embeddings", "token_ids"] = "embeddings"
+
     @staticmethod
     def get_model_state_cls():
         return BlockDiffusionModelState

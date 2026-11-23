@@ -200,9 +200,20 @@ class BlockDiffusionModelState(ModelState):
         if not self.supports_mm_inputs or self._inputs_embeds is None:
             return
         self.execute_mm_encoder(scheduled_encoder_inputs)
-        mm_embeds, is_mm_embed = self.gather_mm_embeddings(input_batch)
-        self._mm_embeds = (mm_embeds, is_mm_embed) if mm_embeds else None
-        return
+        outputs, mask = self.gather_mm_embeddings(input_batch)
+        match self.model.image_encoder_output:
+            case "embeddings":
+                self._mm_embeds = (outputs, mask) if outputs else None
+            case "token_ids":
+                if outputs:
+                    indices = mask.nonzero().flatten().to(self.device, non_blocking=True)
+                    ids = torch.cat(outputs).flatten().to(input_batch.input_ids.dtype)
+                    slots = per_token(input_batch.idx_mapping[: input_batch.num_reqs], input_batch)
+                    input_batch.input_ids[indices] = ids
+                    tokens = req_states.all_token_ids.gpu
+                    tokens[slots[indices], input_batch.positions[indices]] = ids.to(tokens.dtype)
+            case other:
+                raise ValueError(f"Unknown image_encoder_output: {other!r}")
 
     def prepare_dummy_inputs(self, num_reqs: int, num_tokens: int) -> dict[str, Any]:
         positions = self._positions[:num_tokens]

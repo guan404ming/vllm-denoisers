@@ -94,3 +94,5 @@ register_family("MyDiffusionLM", "my_pkg.model:MyDiffusionLM", MyDiffusionConfig
 ```
 
 Override `DecodeConfig.verify(vllm_config)` for family checks. The shared checks in `denoisers.models.verify` run after it. Override `input_embedding()` on the model when its token embedding is not `model.embed_tokens`.
+
+For an image encoder, return one tensor per image from `embed_multimodal()`. The default `image_encoder_output = "embeddings"` merges its rows into the prompt at the processor's selected positions. Set `image_encoder_output = "token_ids"` on the model for discrete visual tokens. Return integer vocabulary IDs with shape `[num_image_tokens, 1]`. The runtime writes them into the current input and request history so a later block can reuse the prompt tail.
