@@ -1,6 +1,6 @@
 # Nemotron Labs Sigma
 
-Serve a checkpoint from the [NVIDIA Sigma collection](https://huggingface.co/collections/nvidia/nemotron-labs-sigma) on one CUDA GPU.
+## Serve
 
 ```bash
 VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Sigma-distill-3B-nfe2 \
@@ -8,12 +8,15 @@ VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Sigma-distill-3B-nfe2
   --dtype bfloat16
 ```
 
-| Checkpoint | Sampler |
+## Decoding
+
+| Setting | Value |
 | --- | --- |
-| 3B and 8B base or instruct | DDIM with 32 steps, log-SNR grid, guidance 3, score temperature 0.3 |
-| Distilled NFE 2, 4, 8, or 16 | Fresh noise at each transition and the checkpoint's fixed step count |
-| Distilled self-speculative | Diffusion drafts with greedy autoregressive verification |
+| Base or instruct (3B, 8B) | DDIM, 32 log-SNR steps, guidance 3, score temperature 0.3. |
+| Distilled (NFE 2, 4, 8, 16) | Fixed checkpoint step count, fresh noise per transition. |
+| Distilled self-speculative | Diffusion drafts, greedy autoregressive verification. |
 
-vLLM schedules requests and returns completed blocks. For each request, the adapter calls the checkpoint sampler once per block and encodes the committed prefix again. Self-speculative BF16 output can differ at a block boundary from a single uninterrupted reference call.
+## Notes
 
-Use the default request sampling parameters. This adapter requires eager execution and unquantized weights. It rejects logprobs and per-request policy overrides.
+- Use one CUDA GPU, eager execution, unquantized weights, and default sampling parameters. Logprobs and per-request policy overrides are unsupported.
+- Each block re-encodes the committed prefix. Self-speculative BF16 output may differ from an uninterrupted reference run at block boundaries. [Checkpoint collection](https://huggingface.co/collections/nvidia/nemotron-labs-sigma).

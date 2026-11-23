@@ -1,13 +1,19 @@
 # LLaDA2
 
-Follow the [quick start](../quickstart.md) to serve `inclusionAI/LLaDA2.0-mini`. The mini and flash checkpoints use a 32-token canvas by default.
+## Serve
 
-| Checkpoint family | Policy | Selection |
-| --- | --- | --- |
-| LLaDA2.0 | `low_confidence` | Default for checkpoints without expert capacity or a policy override |
-| LLaDA2.1 | `joint` | Pass `--hf-overrides '{"decode_policy":"joint"}'` to enable joint token editing |
-| LLaDA2.2 | `indel` | The config selects insert/delete decoding when the checkpoint sets expert capacity |
+Run the [quick start](../quickstart.md#start-the-server) with `inclusionAI/LLaDA2.0-mini`.
 
-Use `confidence_threshold` for unmasking and `editing_threshold` for edits. The indel policy can split and delete positions. Its anti-loop rule resamples the lowest-confidence changed position. The reference picks a changed position at random.
+## Decoding
 
-LLaDA2.2 block routing needs unquantized MoE kernels with expert load balancing disabled. Its fast tokenizer handles plain text. The reference tokenizer's tool rendering and long-text chunking are outside this adapter.
+| Setting | Value |
+| --- | --- |
+| LLaDA2.0 | `low_confidence` by default without expert capacity or a policy override. |
+| LLaDA2.1 | Enable joint editing with `--hf-overrides '{"decode_policy":"joint"}'`. |
+| LLaDA2.2 | Expert capacity selects `indel` for splits and deletions. |
+
+## Notes
+
+- Mini and flash default to 32-token canvases. Tune `confidence_threshold` for unmasking and `editing_threshold` for edits.
+- Indel loop recovery resamples the lowest-confidence changed position. The reference picks one at random.
+- LLaDA2.2 requires unquantized MoE kernels and disabled expert load balancing. Its fast tokenizer supports plain text only (no reference tool rendering or long-text chunking).

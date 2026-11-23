@@ -49,13 +49,7 @@ This workload uses synthetic inputs and fixes the output length. For a service w
 | SLO20 attainment | Successful requests that finish within 20 seconds divided by all measured requests sent. Count failed requests as misses. |
 | Goodput | Requests per second that meet the configured latency target. |
 
-For SLO20, use the detailed JSON `latencies` in seconds and the corresponding `errors`. For accuracy, run the paired GSM8K evaluation with natural stopping.
-
-```bash
-modal run tests/llada2_eval.py::gsm8k --model inclusionAI/LLaDA2.0-mini --n 100 --n-ref 30
-```
-
-See [Testing](testing.md) for Modal setup and cache handling. Report the full evaluation count and the paired reference count separately.
+For SLO20, use the detailed JSON `latencies` in seconds and the corresponding `errors`. For accuracy with natural stopping, see the [paired GSM8K test](testing.md#compare-with-a-reference).
 
 ## Record a run
 

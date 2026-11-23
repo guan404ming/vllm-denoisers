@@ -1,17 +1,27 @@
 # DiffusionGemma
 
+## Serve
+
 ```bash
 VLLM_PLUGINS=denoisers vllm serve google/diffusiongemma-26B-A4B-it \
   --attention-backend TRITON_ATTN --max-num-seqs 8 --max-num-batched-tokens 4096
 ```
 
-The `entropy_bound` policy starts with random tokens, accepts confident positions, and adds fresh noise to the rest. It feeds a weighted token embedding into the next step. The sparse calculation uses tokens with probability at least 0.001, up to 128 per position. Set `--hf-overrides '{"sparse_self_conditioning":false}'` for the dense embedding calculation.
+## Decoding
 
-The commit pass uses causal attention. Output logprobs come from the converging denoise step at its scheduled temperature. To process images, allow at least 2496 tokens in the batch budget for an image of that token count.
+| Setting | Value |
+| --- | --- |
+| Policy | `entropy_bound` starts with random tokens, accepts confident positions, and renoises the rest. |
+| Next-step input | Weighted token embeddings. Sparse mode uses probabilities ≥ 0.001, up to 128 tokens per position. |
+| Commit | Causal attention. Logprobs come from the converging step at its scheduled temperature. |
 
-## Control a request
+## Notes
 
-Pass these keys in `SamplingParams.extra_args`. Use `--diffusion-config '{"canvas_length":32}'` to set an engine-wide canvas width.
+- For dense embeddings, pass `--hf-overrides '{"sparse_self_conditioning":false}'`. The model reads sampler defaults from its checkpoint.
+- Budget enough batch tokens for each image (e.g., 2496 for a 2496-token image).
+- Set the engine canvas limit with `--diffusion-config '{"canvas_length":32}'`. Pass request overrides in `SamplingParams.extra_args`.
+
+## Request controls
 
 | Key | Effect |
 | --- | --- |
@@ -22,4 +32,4 @@ Pass these keys in `SamplingParams.extra_args`. Use `--diffusion-config '{"canva
 | `diffusion_read_only` | Emit tokens on convergence and skip the commit forward. |
 | `diffusion_constrained` | Limit choices to `logprob_token_ids`. Set `logprobs` to the number of allowed IDs. |
 
-Use `ignore_eos` for a read that must fill the requested width.
+For fixed-width reads, set `ignore_eos`.

@@ -1,6 +1,6 @@
 # SDAR and TraDo
 
-Serve a dense SDAR checkpoint with the confidence-threshold decoder.
+## Serve
 
 ```bash
 vllm serve JetLM/SDAR-1.7B-Chat \
@@ -8,6 +8,14 @@ vllm serve JetLM/SDAR-1.7B-Chat \
   --generation-config vllm
 ```
 
-The adapter also registers the SDAR MoE architecture used by the 30B-A3B family. TraDo checkpoints such as `Gen-Verse/TraDo-8B-Instruct` use the same family.
+## Decoding
 
-The default canvas has four positions. Match the trained block size for other checkpoints. For `JetLM/SDAR-1.7B-Chat-b32`, set `--hf-overrides '{"canvas_length":32}'` and `--block-size 32`. The `confidence_threshold` override controls which masked predictions the decoder accepts in a step.
+| Setting | Value |
+| --- | --- |
+| Policy | Confidence threshold. Tune `confidence_threshold` to accept more or fewer masked predictions. |
+| Canvas | Four positions by default. Match the checkpoint’s trained block size. |
+
+## Notes
+
+- For `JetLM/SDAR-1.7B-Chat-b32`, pass `--hf-overrides '{"canvas_length":32}' --block-size 32`.
+- The same adapter supports SDAR MoE (30B-A3B) and TraDo (e.g., `Gen-Verse/TraDo-8B-Instruct`).

@@ -1,0 +1,38 @@
+[project]
+site_name = "vllm-denoisers"
+site_url = "https://guan404ming.github.io/vllm-denoisers/"
+nav = [
+    { "Home" = "index.md" },
+    { "User guide" = [{ "Overview" = "user-guide.md" }, "installation.md", "quickstart.md", "how-it-works.md"] },
+    { "Models" = [
+        { "Overview" = "models.md" },
+        "models/diffusion-gemma.md",
+        "models/dream.md",
+        "models/fast-dllm-v2.md",
+        "models/llada.md",
+        "models/llada2.md",
+        "models/nemotron-labs-diffusion.md",
+        "models/nemotron-labs-sigma.md",
+        "models/sdar-trado.md",
+        "models/stable-diffcoder.md",
+    ] },
+    { "Serving" = ["serving.md", "scheduling.md", "kv-cache.md"] },
+    { "Benchmarking" = "benchmarking.md" },
+    { "Contributor guide" = [{ "Overview" = "contributor-guide.md" }, "architecture.md", "extending.md", "testing.md"] },
+]
+[project.theme]
+logo = "assets/denoisers.svg"
+favicon = "assets/denoisers.svg"
+features = ["navigation.tabs", "navigation.sections", "navigation.path", "navigation.footer", "content.code.copy"]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"

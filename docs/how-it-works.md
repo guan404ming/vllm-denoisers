@@ -1,6 +1,8 @@
 # How decoding works
 
-A canvas is a block of token positions that a request refines together. The shared runtime keeps a separate canvas for each request. [Nemotron Labs Sigma](models/nemotron-labs-sigma.md) uses its checkpoint's continuous diffusion sampler.
+A canvas is a block of token positions that a request refines together. The shared runtime keeps a separate canvas for each request. Token-canvas models refine discrete tokens. Continuous-latent models refine latent states and decode them into tokens.
+
+For token-canvas models:
 
 1. **Prefill.** The model reads the prompt. For block-aligned policies, a partial prompt block shares the first canvas with the start of the response.
 2. **Denoise.** The model scores the canvas. The decode policy fills masks, edits tokens, or applies fresh noise. The runtime schedules the same block again while the policy still has work.

@@ -1,4 +1,4 @@
-# Schedule denoising requests
+# Request scheduling
 
 Use the resident/active scheduler to give some decoding requests priority while others keep their canvas and cached keys and values in memory. The active limit controls how many resident decoding requests can advance on one step.
 

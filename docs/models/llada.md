@@ -1,13 +1,23 @@
 # LLaDA-8B
 
+## Serve
+
 ```bash
 vllm serve GSAI-ML/LLaDA-8B-Instruct \
   --attention-backend TRITON_ATTN --no-enable-prefix-caching --no-enable-chunked-prefill \
   --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 --generation-config vllm
 ```
 
-The `llada` policy uses a 256-position canvas and 32-position sub-blocks by default. It starts each sub-block at an offset from the response start. With a positive decoding temperature, it ranks sampled tokens by their untempered probabilities.
+## Decoding
 
-Choose a canvas that fits the prompt and the intended response. A longer prompt leaves only its trailing partial block on the canvas. The model prefills earlier tokens once, which changes their interaction with the response. The available response region is the canvas minus the prompt tail. The request's `max_tokens` can truncate that region.
+| Setting | Value |
+| --- | --- |
+| Policy | `llada`: sub-block offsets start at the response boundary. |
+| Canvas | `canvas_length=256`, `sub_block_length=32` by default. |
+| Step budget | `denoise_steps` spans the entire canvas. Set all three options via `--hf-overrides`. |
 
-Set `canvas_length`, `sub_block_length`, and `denoise_steps` through `--hf-overrides`. The step budget covers the whole canvas. Increase the [batch token budget](../models.md#configure-the-shared-canvas-runtime) when you increase the canvas.
+## Notes
+
+- Fit prompt and response on one canvas for reference parity. Longer prompts prefill earlier tokens once. The trailing prompt block shares the canvas with the response.
+- `max_tokens` can further limit the response. For a larger canvas, increase the [batch token budget](../serving.md).
+- At positive temperatures, rank sampled tokens by their untempered probabilities.

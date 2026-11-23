@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Denoisers</title>
+  <path fill="#FDB517" d="M2 16h11l7 25-5 13z"/>
+  <path fill="#30A2FF" fill-rule="evenodd" d="M25 13l12-5-13 46h-9z M39 11h3c13 0 21 8 21 19 0 14-10 24-25 24H28l3-10h7c9 0 15-6 15-14 0-6-4-10-12-10h-5z"/>
+</svg>

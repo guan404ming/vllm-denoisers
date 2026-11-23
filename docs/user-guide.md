@@ -4,4 +4,10 @@
 2. [Start the server and send a request](quickstart.md).
 3. [Find your model](models.md) for checkpoint-specific options and differences from its reference sampler.
 
-Read [How decoding works](how-it-works.md) to understand when a request returns tokens. Use [Scheduling](scheduling.md) to control which requests advance on each step.
+## Serving
+
+- [Batch and canvas limits](serving.md)
+- [Request scheduling](scheduling.md)
+- [KV cache reuse](kv-cache.md)
+
+See [How decoding works](how-it-works.md) for the denoising loop.

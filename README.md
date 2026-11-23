@@ -1,24 +1,21 @@
-# vllm-denoisers
+# <img src="docs/assets/denoisers.svg" height="28" alt=""> vllm-denoisers
 
-Serve diffusion language models through vLLM's OpenAI-compatible API. The plugin supplies model adapters and decoding policies. vLLM manages requests, batches, and the KV cache.
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](pyproject.toml)
+
+Serve diffusion language models through vLLM’s OpenAI-compatible API. Each request refines a block over several steps, then emits the completed tokens.
+
+Supported families include LLaDA2, Dream, DiffusionGemma, and Nemotron Labs Sigma. [Full model list](docs/models.md)
 
 ## Quick start
 
-[Install the plugin](docs/installation.md) in your vLLM environment. Start LLaDA2 with the Triton attention backend.
+On a Linux CUDA host, install the [compatible vLLM build](docs/installation.md). From the repository root, install the plugin and serve LLaDA2.
 
 ```bash
+uv pip install -e .
 vllm serve inclusionAI/LLaDA2.0-mini \
   --attention-backend TRITON_ATTN --block-size 32 --no-enable-chunked-prefill \
   --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 \
   --generation-config vllm
 ```
 
-In a second terminal, [send your first request](docs/quickstart.md#send-a-request). The generated text appears in `choices[0].text`.
-
-## Documentation
-
-Browse the [documentation index](docs/index.md) or choose a guide.
-
-- [User guide](docs/user-guide.md) covers installation, supported checkpoints, and scheduling.
-- [Benchmarking](docs/benchmarking.md) shows how to compare serving configurations.
-- [Contributor guide](docs/contributor-guide.md) covers the runtime, policy extensions, and tests.
+[Send your first request](docs/quickstart.md#send-a-request) · [Serving settings](docs/serving.md) · [Benchmarking](docs/benchmarking.md) · [Documentation](docs/index.md)
