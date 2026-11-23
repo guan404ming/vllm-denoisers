@@ -9,7 +9,11 @@ from denoisers.models.fast_dllm.config import FastDLLMQwenConfig
 from denoisers.models.llada.config import LLaDAConfig
 from denoisers.models.llada2.config import LLaDA2MoeConfig
 from denoisers.models.llada2.tokenizer import CustomFastTokenizer
-from denoisers.models.nemotron_diffusion.config import NemotronLabsDiffusionConfig
+from denoisers.models.nemotron_diffusion.config import (
+    NemotronLabsDiffusionConfig,
+    NemotronLabsDiffusionVLMConfig,
+    NemotronLabsDiffusionVLMTokenizerFast,
+)
 from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
 from denoisers.models.sigma.config import SigmaModelConfig
 from denoisers.models.stable_diffcoder.model import StableDiffcoderModelConfig
@@ -17,6 +21,7 @@ from denoisers.models.verify import BlockDiffusionModelConfig
 
 FAMILIES = (
     ("LLaDA2MoeModelLM", "llada2.model:LLaDA2MoeModelLM", LLaDA2MoeConfig, CustomFastTokenizer),
+    ("LLaDA2UniForImageUnderstanding", "llada2.uni:LLaDA2UniForImageUnderstanding", None, None),
     ("SDARForCausalLM", "sdar.model:SDARForCausalLM", SDARConfig, None),
     ("SDARMoeForCausalLM", "sdar.model:SDARMoeForCausalLM", SDARMoeConfig, None),
     (
@@ -30,6 +35,12 @@ FAMILIES = (
         "nemotron_diffusion.model:NemotronLabsDiffusionModel",
         NemotronLabsDiffusionConfig,
         None,
+    ),
+    (
+        "NemotronLabsDiffusionVLMModel",
+        "nemotron_diffusion.vlm:NemotronLabsDiffusionVLMModel",
+        NemotronLabsDiffusionVLMConfig,
+        NemotronLabsDiffusionVLMTokenizerFast,
     ),
     ("DreamModel", "dream.model:DreamModel", DreamConfig, DreamTokenizer),
     ("LLaDAModelLM", "llada.model:LLaDAModelLM", LLaDAConfig, None),

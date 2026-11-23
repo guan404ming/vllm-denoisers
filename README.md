@@ -5,12 +5,14 @@ vLLM plugin for diffusion language models. Install it and vLLM loads it; no fork
 | Family | Checkpoints | Kind | Default policy |
 |---|---|---|---|
 | LLaDA2.0 / 2.1 / 2.2 | `inclusionAI/LLaDA2.x-mini`, `-flash` | block diffusion | `low_confidence` / `joint` / `indel` |
+| LLaDA2.0-Uni | `inclusionAI/LLaDA2.0-Uni` | image and text to text | `low_confidence` |
 | Stable-DiffCoder | `ByteDance-Seed/Stable-DiffCoder-8B-{Base,Instruct}` | block diffusion | `low_confidence` |
 | SDAR, TraDo | `JetLM/SDAR-*-Chat`, `Gen-Verse/TraDo-*` | block diffusion | `low_confidence` |
 | Fast-dLLM v2 | `Efficient-Large-Model/Fast_dLLM_v2_*` | block diffusion | `fast_dllm` |
 | LLaDA-8B | `GSAI-ML/LLaDA-8B-Instruct` | full attention, decoded per canvas | `llada` |
 | Dream | `Dream-org/Dream-v0-Instruct-7B` | full attention, decoded per canvas | `dream` |
 | Nemotron Labs Diffusion | `nvidia/Nemotron-Labs-Diffusion-3B` | block diffusion | `nemotron_diffusion` |
+| Nemotron Labs Diffusion VLM | `nvidia/Nemotron-Labs-Diffusion-VLM-8B` | image and text to text | `nemotron_vlm` |
 | Nemotron Labs Sigma | NVIDIA 3B and 8B, base, instruct, distilled, self-speculative | continuous diffusion | [checkpoint sampler](docs/models.md#nemotron-labs-sigma) |
 | DiffusionGemma | `google/diffusiongemma-26B-A4B-it` | uniform noise, self-conditioning | `entropy_bound` |
 
