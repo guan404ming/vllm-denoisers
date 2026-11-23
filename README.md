@@ -1,39 +1,24 @@
 # vllm-denoisers
 
-vLLM plugin for diffusion language models. Install it and vLLM loads it; no fork.
+Serve diffusion language models through vLLM's OpenAI-compatible API. The plugin supplies model adapters and decoding policies. vLLM manages requests, batches, and the KV cache.
 
-| Family | Checkpoints | Kind | Default policy |
-|---|---|---|---|
-| LLaDA2.0 / 2.1 / 2.2 | `inclusionAI/LLaDA2.x-mini`, `-flash` | block diffusion | `low_confidence` / `joint` / `indel` |
-| LLaDA2.0-Uni | `inclusionAI/LLaDA2.0-Uni` | image and text to text | `low_confidence` |
-| Stable-DiffCoder | `ByteDance-Seed/Stable-DiffCoder-8B-{Base,Instruct}` | block diffusion | `low_confidence` |
-| SDAR, TraDo | `JetLM/SDAR-*-Chat`, `Gen-Verse/TraDo-*` | block diffusion | `low_confidence` |
-| Fast-dLLM v2 | `Efficient-Large-Model/Fast_dLLM_v2_*` | block diffusion | `fast_dllm` |
-| LLaDA-8B | `GSAI-ML/LLaDA-8B-Instruct` | full attention, decoded per canvas | `llada` |
-| Dream | `Dream-org/Dream-v0-Instruct-7B` | full attention, decoded per canvas | `dream` |
-| Nemotron Labs Diffusion | `nvidia/Nemotron-Labs-Diffusion-3B` | block diffusion | `nemotron_diffusion` |
-| Nemotron Labs Diffusion VLM | `nvidia/Nemotron-Labs-Diffusion-VLM-8B` | image and text to text | `nemotron_vlm` |
-| Nemotron Labs Sigma | NVIDIA 3B and 8B, base, instruct, distilled, self-speculative | continuous diffusion | [checkpoint sampler](docs/models.md#nemotron-labs-sigma) |
-| DiffusionGemma | `google/diffusiongemma-26B-A4B-it` | uniform noise, self-conditioning | `entropy_bound` |
+## Quick start
 
-- Continuous batching, CUDA graphs, prefix caching, tensor parallelism, fp8.
-- Pluggable decode, KV, input, and hold policies, per-request decode policies, and model families.
-- DiffusionGemma: +20-25% throughput over vLLM's native path on H200, same GSM8K and MMLU.
-- Tracks vLLM main; last verified at `5689c2790`.
+[Install the plugin](docs/installation.md) in your vLLM environment. Start LLaDA2 with the Triton attention backend.
 
 ```bash
-uv sync
 vllm serve inclusionAI/LLaDA2.0-mini \
-  --attention-backend TRITON_ATTN --block-size 32 --no-enable-chunked-prefill
+  --attention-backend TRITON_ATTN --block-size 32 --no-enable-chunked-prefill \
+  --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 \
+  --generation-config vllm
 ```
 
-## Docs
+In a second terminal, [send your first request](docs/quickstart.md#send-a-request). The generated text appears in `choices[0].text`.
 
-- [models.md](docs/models.md): per-family flags and decode knobs.
-- [deviations.md](docs/deviations.md): where decoding differs from the HF reference.
-- [limits.md](docs/limits.md): what is not supported.
-- [extending.md](docs/extending.md): custom policies and model families.
-- [scheduler.md](docs/scheduler.md): resident/active scheduling.
-- [diffusion_gemma.md](docs/diffusion_gemma.md): the DiffusionGemma sampler.
-- [results.md](docs/results.md): throughput, SLO, and accuracy.
-- [checks.md](docs/checks.md): tests and vLLM coupling points.
+## Documentation
+
+Browse the [documentation index](docs/index.md) or choose a guide.
+
+- [User guide](docs/user-guide.md) covers installation, supported checkpoints, and scheduling.
+- [Benchmarking](docs/benchmarking.md) shows how to compare serving configurations.
+- [Contributor guide](docs/contributor-guide.md) covers the runtime, policy extensions, and tests.
