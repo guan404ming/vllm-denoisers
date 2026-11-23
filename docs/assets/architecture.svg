@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="880" height="672" viewBox="0 0 880 672" role="img" aria-labelledby="title desc">
+  <title id="title">How vLLM schedules a denoising step</title>
+  <desc id="desc">vLLM schedules a step for a model adapter. Token-canvas models update token predictions. Continuous-latent models refine a latent representation and decode it into tokens. Both use the shared canvas sampler. An unfinished block keeps its sequence position for another step. A finished block returns tokens to vLLM.</desc>
+  <style>
+    :root { color-scheme: light dark; color: CanvasText; }
+    text { font-family: Inter, system-ui, sans-serif; fill: currentColor; }
+    .panel { fill: none; stroke: #d5d5d5; stroke-width: 1.5; }
+    .shared { fill: none; stroke: #858585; stroke-width: 2; }
+    .heading { font-size: 21px; font-weight: 700; }
+    .detail { font-size: 18px; }
+    .wire { fill: none; stroke: #858585; stroke-width: 2; stroke-linejoin: round; }
+    .arrow { fill: #858585; }
+    .icon { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) {
+      .panel { stroke: #474747; }
+      .shared { stroke: #9a9a9a; }
+      .wire { stroke: #9a9a9a; }
+      .arrow { fill: #9a9a9a; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path class="arrow" d="M0 0 10 5 0 10Z"/>
+    </marker>
+  </defs>
+
+  <g class="wire">
+    <path d="M456 134V162 M252 162H660"/>
+    <path d="M252 162V185" marker-end="url(#arrow)"/>
+    <path d="M660 162V185" marker-end="url(#arrow)"/>
+    <path d="M252 324V354H660V324"/>
+    <path d="M456 354V377" marker-end="url(#arrow)"/>
+    <path d="M456 482V510 M252 510H660"/>
+    <path d="M252 510V533" marker-end="url(#arrow)"/>
+    <path d="M660 510V533" marker-end="url(#arrow)"/>
+    <path d="M68 591H34V86H63" marker-end="url(#arrow)"/>
+  </g>
+
+  <g class="panel">
+    <rect x="68" y="36" width="776" height="98" rx="16"/>
+    <rect x="68" y="190" width="368" height="134" rx="16"/>
+    <rect x="476" y="190" width="368" height="134" rx="16"/>
+    <rect x="68" y="538" width="368" height="100" rx="16"/>
+    <rect x="476" y="538" width="368" height="100" rx="16"/>
+  </g>
+  <rect class="shared" x="68" y="382" width="776" height="100" rx="16"/>
+
+  <image x="100" y="53" width="32" height="32" aria-hidden="true" xlink:href="data:image/png;base64,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"/>
+  <text class="heading" x="146" y="77">vLLM scheduler</text>
+  <text class="detail" x="100" y="107">Select requests for next step</text>
+
+  <g class="icon" transform="translate(100 219)" aria-hidden="true">
+    <rect x="1" y="1" width="23" height="23" rx="4"/>
+    <path d="M9 1v23m7-23v23M1 9h23M1 16h23"/>
+  </g>
+  <text class="heading" x="140" y="239">Token-canvas models</text>
+  <text class="detail" x="100" y="273">Score canvas tokens</text>
+  <text class="detail" x="100" y="298">Apply decode policy</text>
+
+  <path class="icon" transform="translate(508 219)" d="M0 13h3c3 0 3-10 7-10s4 20 8 20 4-10 7-10h2" aria-hidden="true"/>
+  <text class="heading" x="548" y="239">Continuous-latent models</text>
+  <text class="detail" x="508" y="273">Refine latents</text>
+  <text class="detail" x="508" y="298">Decode to tokens</text>
+
+  <g transform="translate(100 401) scale(.5)" aria-hidden="true">
+    <path fill="#FDB517" d="M2 16h11l7 25-5 13z"/>
+    <path fill="#30A2FF" fill-rule="evenodd" d="M25 13l12-5-13 46h-9z M39 11h3c13 0 21 8 21 19 0 14-10 24-25 24H28l3-10h7c9 0 15-6 15-14 0-6-4-10-12-10h-5z"/>
+  </g>
+  <text class="heading" x="140" y="424">Shared canvas sampler</text>
+  <text class="detail" x="100" y="455">Report output token count per request</text>
+
+  <path class="icon" transform="translate(100 561)" d="M3 11a10 10 0 1 1 1 8 M3 4v7h7" aria-hidden="true"/>
+  <text class="heading" x="140" y="580">Block in progress</text>
+  <text class="detail" x="100" y="612">Hold position</text>
+
+  <g class="icon" transform="translate(508 561)" aria-hidden="true">
+    <circle cx="13" cy="13" r="11"/>
+    <path d="m7.5 13 3.5 3.5 7.5-8"/>
+  </g>
+  <text class="heading" x="548" y="580">Block complete</text>
+  <text class="detail" x="508" y="612">Emit tokens to vLLM</text>
+</svg>

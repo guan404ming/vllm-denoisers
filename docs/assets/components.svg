@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="352" viewBox="0 0 800 352" role="img" aria-labelledby="title desc">
+  <title id="title">vllm-denoisers components</title>
+  <desc id="desc">The scheduler selects requests for the model adapters. Token-canvas models use decode policies and optional KV reuse policies. Denoising advances each block and reports emitted tokens. vLLM provides batch execution and KV cache allocation.</desc>
+  <style>
+    :root { color-scheme: light dark; color: CanvasText; }
+    text { fill: currentColor; font-family: Inter, system-ui, sans-serif; }
+    .heading { font-size: 18px; font-weight: 500; }
+    .detail { font-size: 15px; opacity: .74; }
+    .frame { fill: none; stroke: currentColor; stroke-opacity: .32; }
+    .divider { fill: none; stroke: currentColor; stroke-opacity: .20; }
+    .icon { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+  </style>
+
+  <rect class="frame" x="8" y="8" width="784" height="336" rx="12"/>
+  <path class="divider" d="M400 8v168 M8 92h784 M8 176h784 M8 260h784"/>
+
+  <g class="icon" aria-hidden="true">
+    <path transform="translate(34 38) scale(.85)" d="M1 4h18M1 12h14M1 20h10m4 0h12m-5-5 5 5-5 5"/>
+    <path transform="translate(34 206) scale(.85)" d="m0 7 14-7 14 7-14 7z M0 14l14 7 14-7 M0 21l14 7 14-7"/>
+    <g transform="translate(426 38) scale(.85)">
+      <rect x="5" y="5" width="18" height="18" rx="3"/>
+      <path d="M10 1v4m8-4v4M10 23v4m8-4v4M1 10h4m-4 8h4m18-8h4m-4 8h4"/>
+    </g>
+    <path transform="translate(34 122) scale(.85)" d="M1 5h7m7 0h12M1 14h16m7 0h3M1 23h3m7 0h16 M9 2h5v6H9z M18 11h5v6h-5z M5 20h5v6H5z"/>
+    <g transform="translate(426 122) scale(.85)">
+      <ellipse cx="14" cy="5" rx="13" ry="5"/>
+      <path d="M1 5v18c0 7 26 7 26 0V5 M1 14c0 7 26 7 26 0"/>
+    </g>
+    <g transform="translate(34 290) scale(.85)">
+      <rect x="0" y="1" width="28" height="10" rx="2"/>
+      <rect x="0" y="17" width="28" height="10" rx="2"/>
+      <path d="M5 6h4m-4 16h4"/>
+    </g>
+  </g>
+
+  <text class="heading" x="76" y="46">Request scheduler</text>
+  <text class="detail" x="76" y="69">Select requests · Optional active limit</text>
+
+  <text class="heading" x="468" y="46">Model adapters</text>
+  <text class="detail" x="468" y="69">Token canvases · Continuous latents</text>
+
+  <text class="heading" x="76" y="130">Decode policies</text>
+  <text class="detail" x="76" y="153">Unmask · Edit · Renoise</text>
+
+  <text class="heading" x="468" y="130">KV reuse policies</text>
+  <text class="detail" x="468" y="153">Refresh masked positions or a window</text>
+
+  <text class="heading" x="76" y="214">Denoising iteration</text>
+  <text class="detail" x="76" y="237">Advance block · Report emitted token count</text>
+
+  <text class="heading" x="76" y="298">vLLM runtime</text>
+  <text class="detail" x="76" y="321">Batch execution · KV cache allocation</text>
+</svg>
