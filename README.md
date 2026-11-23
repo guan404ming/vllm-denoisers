@@ -7,9 +7,14 @@
 
 Serve diffusion language models through vLLM’s OpenAI-compatible API. Each request refines a block over several steps, then emits the completed tokens.
 
-Supported families include LLaDA2, Dream, DiffusionGemma, and Nemotron Labs Sigma.
+[Documentation](https://guan404ming.github.io/vllm-denoisers/)
 
-[Documentation](https://guan404ming.github.io/vllm-denoisers/) · [Full model list](https://guan404ming.github.io/vllm-denoisers/models/)
+## Supported models
+
+| Model type | Families |
+| --- | --- |
+| Token-canvas | [DiffusionGemma](https://guan404ming.github.io/vllm-denoisers/models/diffusion-gemma/), [Dream](https://guan404ming.github.io/vllm-denoisers/models/dream/), [Fast-dLLM v2](https://guan404ming.github.io/vllm-denoisers/models/fast-dllm-v2/), [LLaDA-8B](https://guan404ming.github.io/vllm-denoisers/models/llada/), [LLaDA2](https://guan404ming.github.io/vllm-denoisers/models/llada2/), [Nemotron Labs Diffusion](https://guan404ming.github.io/vllm-denoisers/models/nemotron-labs-diffusion/), [SDAR](https://guan404ming.github.io/vllm-denoisers/models/sdar-trado/), [Stable-DiffCoder](https://guan404ming.github.io/vllm-denoisers/models/stable-diffcoder/), [TraDo](https://guan404ming.github.io/vllm-denoisers/models/trado/) |
+| Continuous-latent | [Nemotron Labs Sigma](https://guan404ming.github.io/vllm-denoisers/models/nemotron-labs-sigma/) |
 
 ## Quick start
 

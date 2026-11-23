@@ -16,7 +16,7 @@ vllm = ["vllm"]
 denoisers = "denoisers.plugin:register"
 
 [dependency-groups]
-dev = ["pytest", "ruff"]
+dev = ["pillow", "pytest", "ruff"]
 
 [tool.setuptools.packages.find]
 include = ["denoisers*"]
