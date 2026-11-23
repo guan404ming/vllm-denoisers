@@ -17,7 +17,7 @@ from denoisers.ops.sampling import exclude_filtered_mask
 from denoisers.ops.stats import row_stats
 from denoisers.patches import draft_tokens
 from denoisers.policies.inputs import InputPolicy
-from denoisers.runtime.batch import query_lens
+from denoisers.runtime.batch import finished_prefills, query_lens
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime, inverse_index
 from denoisers.scheduler.probe import Probe
@@ -43,7 +43,7 @@ class CanvasSampler:
         self._sampled = torch.zeros(max_num_reqs, block_length, dtype=torch.int32, device=device)
         self._num_sampled = torch.zeros(max_num_reqs, dtype=torch.int32, device=device)
 
-    def _finish_prefills(self, input_batch, rows):
+    def _finish_prefills(self, input_batch):
         pass
 
     def _decode(self, hidden, input_batch, rows, widths, sampled, num_sampled):
@@ -55,12 +55,11 @@ class CanvasSampler:
         num_sampled = self._num_sampled[:num_reqs]
         sampled.zero_()
         num_sampled.zero_()
+        self._finish_prefills(input_batch)
         if input_batch.num_draft_tokens == 0:
-            self._finish_prefills(input_batch, np.arange(num_reqs))
             return _output(sampled[:, :1], num_sampled, num_sampled)
 
         widths = np.diff(input_batch.cu_num_logits_np[: num_reqs + 1])
-        self._finish_prefills(input_batch, np.where(widths == 0)[0])
         rows_np = np.where(widths > 0)[0]
         if len(rows_np) == 0:
             return _output(sampled[:, :1], num_sampled, num_sampled)
@@ -152,17 +151,14 @@ class BlockDiffusionSampler(CanvasSampler):
         rows = min(hidden_states.shape[0], self._budget_tokens(hidden_states.device))
         torch.empty_like(self.compute_logits(hidden_states[:rows]))
 
-    def _finish_prefills(self, input_batch, rows: np.ndarray) -> None:
+    def _finish_prefills(self, input_batch) -> None:
         self._need_event.synchronize()
-        done = (
-            input_batch.num_computed_prefill_tokens_np[rows]
-            + input_batch.num_scheduled_tokens[rows]
-            >= input_batch.prefill_len_np[rows]
-        )
+        if not input_batch.has_prefill:
+            return
         state = self.state
         block = state.block_length
         tokens = self.req_states.all_token_ids.gpu
-        for row in rows[done]:
+        for row in finished_prefills(input_batch):
             slot = int(input_batch.idx_mapping_np[row])
             length = int(input_batch.prefill_len_np[row])
             shift = 0
@@ -173,6 +169,8 @@ class BlockDiffusionSampler(CanvasSampler):
             canvas = state.canvas[slot : slot + 1]
             policy = self.decoders.of(slot)
             state.canvas[slot] = policy.init_canvas(canvas, slots, first=True)[0]
+            if policy.prefill_seed is not None:
+                state.canvas[slot, shift] = state.prefill_seed[slot]
             self.req_states.draft_tokens[slot, :block] = state.canvas[slot]
             self._need[slot] = block - shift
             self._need_host[slot] = block - shift

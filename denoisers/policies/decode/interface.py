@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import replace
 
 import torch
@@ -14,6 +15,7 @@ class DecodePolicy(ABC):
     aligned = True
     causal_prefill = True
     causal_commit = False
+    prefill_seed: Callable[[torch.Tensor], torch.Tensor] | None = None
     commit_logits = True
     sparse_logits = False
     shifted = False

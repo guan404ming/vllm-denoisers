@@ -10,7 +10,7 @@ from vllm.v1.worker.gpu.model_states.interface import ModelState
 
 from denoisers.canvas.state import CanvasState
 from denoisers.policies import inputs, kv
-from denoisers.runtime.batch import per_token, prefill_block_ranges
+from denoisers.runtime.batch import finished_prefills, per_token, prefill_block_ranges
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime
 from denoisers.runtime.sampler import BlockDiffusionSampler
@@ -80,6 +80,7 @@ class BlockDiffusionModelState(ModelState):
             )
         )
         self._mm_embeds = None
+        self._seed_slots: list[int] = []
 
     def get_supported_generation_tasks(self):
         return ("generate",)
@@ -98,7 +99,14 @@ class BlockDiffusionModelState(ModelState):
         ), None
 
     def compute_sample_logits(self, hidden_states: torch.Tensor) -> torch.Tensor:
-        return hidden_states
+        count = len(self._seed_slots)
+        if not count:
+            return hidden_states
+        for slot, hidden in zip(self._seed_slots, hidden_states[-count:].split(1), strict=True):
+            policy = self.decoders.of(slot)
+            logits = self.model.compute_logits(hidden)
+            self.state.prefill_seed[slot] = policy.prefill_seed(logits)[0]
+        return hidden_states[:-count]
 
     def dummy_sampler_run(self, sampler: Any, hidden_states: torch.Tensor) -> bool:
         sampler.profile_run(hidden_states)
@@ -183,6 +191,18 @@ class BlockDiffusionModelState(ModelState):
     def prepare_inputs(self, input_batch, req_states) -> dict[str, Any]:
         num_tokens = input_batch.num_tokens
         padded = input_batch.num_tokens_after_padding
+        self._seed_slots.clear()
+        if input_batch.has_prefill:
+            rows = finished_prefills(input_batch)
+            slots = input_batch.idx_mapping_np[rows]
+            seeded = self.decoders.flags(slots, "prefill_seed")
+            if seeded.any():
+                self._seed_slots = slots[seeded].tolist()
+                ends = input_batch.query_start_loc_np[rows[seeded] + 1] - 1
+                indices = async_tensor_h2d(
+                    ends, device=self.device, dtype=input_batch.logits_indices.dtype
+                )
+                input_batch.logits_indices = torch.cat((input_batch.logits_indices, indices))
         positions = self._fill_positions(input_batch)
         if getattr(self.model, "block_routers", ()):
             ids = self._block_ids[:padded]

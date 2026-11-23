@@ -13,6 +13,8 @@ Each policy registry accepts a short name or an importable class path in the ser
 
 Implement `DecodePolicy.from_config(config, model)` and `__call__(logits, rows)`. Return updated `CanvasRows` and a `StepResult`. Set `done` for rows ready to commit. To reuse token sampling and prefix exit, subclass `ScoreMovePolicy` and implement `score` and `move`. A policy that needs previous steps can request a history window with `history_length`.
 
+To seed the first generated position, implement `prefill_seed(logits)`. It receives raw logits of shape `[rows, vocab_size]` from the last prompt token of each request that finished prefill. Return one token ID per row. Later blocks use `next_seed`.
+
 A request can select a registered decoder by name.
 
 ```python
