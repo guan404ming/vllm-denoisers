@@ -40,3 +40,5 @@ Implement `rank(candidates, now, scores)`. Return request IDs in priority order.
 ## Register a model family
 
 For a model that shares the canvas runtime, add the `DecodeConfig` mixin to its Hugging Face config and the `BlockDiffusionModel` mixin to its model class. Call `register_family(architecture, model_path, config_class)` from plugin initialization. Pass a tokenizer or verifier if the checkpoint requires one. Use the [SDAR adapter](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/models/sdar/model.py) and [family registrations](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/models/families.py) as examples.
+
+For an image encoder, return one tensor per image from `embed_multimodal()`. The default `image_encoder_output = "embeddings"` merges its rows into the prompt at the processor's selected positions. Set `image_encoder_output = "token_ids"` on the model for discrete visual tokens. Return integer vocabulary IDs with shape `[num_image_tokens, 1]`. The runtime writes them into the current input and request history so a later block can reuse the prompt tail.

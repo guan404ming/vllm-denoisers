@@ -19,4 +19,4 @@ VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Sigma-distill-3B-nfe2
 ## Notes
 
 - Use one CUDA GPU, eager execution, unquantized weights, and default sampling parameters. Logprobs and per-request policy overrides are unsupported.
-- Each block re-encodes the committed prefix. Self-speculative BF16 output may differ from an uninterrupted reference run at block boundaries. [Checkpoint collection](https://huggingface.co/collections/nvidia/nemotron-labs-sigma).
+- The adapter retains latents, self-conditioning, and the clean prefix cache across steps. Each new block re-encodes the committed prefix. Self-speculative BF16 output may differ from an uninterrupted reference run at block boundaries. [Checkpoint collection](https://huggingface.co/collections/nvidia/nemotron-labs-sigma).

@@ -20,3 +20,4 @@ VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Diffusion-3B \
 
 - For one token per step, pass `--hf-overrides '{"confidence_threshold":null}'`.
 - Use the V2 model runner for text. See the [checkpoint example](https://huggingface.co/nvidia/Nemotron-Labs-Diffusion-3B#chat-with-our-model).
+- For image prompts, use the [8B VLM checkpoint](../models.md#image-understanding). Its unseeded response blocks start fully masked.

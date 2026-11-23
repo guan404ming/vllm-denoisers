@@ -17,3 +17,4 @@ Run the [quick start](../quickstart.md#start-the-server) with `inclusionAI/LLaDA
 - Mini and flash default to 32-token canvases. Tune `confidence_threshold` for unmasking and `editing_threshold` for edits.
 - Indel loop recovery resamples the lowest-confidence changed position. The reference picks one at random.
 - LLaDA2.2 requires unquantized MoE kernels and disabled expert load balancing. Its fast tokenizer supports plain text only (no reference tool rendering or long-text chunking).
+- The Uni checkpoint accepts one image per request. See [image understanding](../models.md#image-understanding) for launch settings.
