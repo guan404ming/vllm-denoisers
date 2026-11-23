@@ -25,6 +25,7 @@ class CanvasState:
         self.width = torch.full((max_num_reqs,), block_length, dtype=torch.int64, device=device)
         self.post_steps = torch.zeros(max_num_reqs, dtype=torch.int64, device=device)
         self.salt = torch.zeros(max_num_reqs, dtype=torch.int64, device=device)
+        self.prefill_seed = torch.empty_like(self.start)
         self.begun = 0
         self.stops = torch.full((max_num_reqs, STOPS), -1, dtype=torch.int64, device=device)
         self.history = None

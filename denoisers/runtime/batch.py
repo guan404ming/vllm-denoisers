@@ -1,4 +1,13 @@
+import numpy as np
 import torch
+
+
+def finished_prefills(input_batch) -> np.ndarray:
+    computed = input_batch.num_computed_prefill_tokens_np
+    return np.flatnonzero(
+        input_batch.is_prefilling_np
+        & (computed + input_batch.num_scheduled_tokens >= input_batch.prefill_len_np)
+    )
 
 
 def query_lens(input_batch) -> torch.Tensor:

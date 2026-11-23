@@ -11,14 +11,13 @@ class NemotronVLMDiffusion(ScoreMovePolicy):
     commit_logits = False
     temperature = 0.0
 
-    def __init__(self, model, mask_id: int, threshold: float | None):
-        self.model = model
+    def __init__(self, mask_id: int, threshold: float | None):
         self.mask_id = mask_id
         self.threshold = threshold
 
     @classmethod
     def from_config(cls, config, model):
-        return cls(model, config.mask_token_id, config.confidence_threshold)
+        return cls(config.mask_token_id, config.confidence_threshold)
 
     def score(self, logits, noise=None, active=None):
         tokens, confidence = sample(logits, self.mask_id, self.temperature, active, noise)
@@ -37,11 +36,8 @@ class NemotronVLMDiffusion(ScoreMovePolicy):
 class NemotronDiffusion(NemotronVLMDiffusion):
     commit_logits = True
 
-    def init_canvas(self, canvas, slots=None, first=False):
-        if first:
-            logits = self.model.compute_logits(self.model.prompt_hidden[slots])
-            canvas[:, 0] = logits.argmax(-1)
-        return canvas
+    def prefill_seed(self, logits: torch.Tensor) -> torch.Tensor:
+        return logits.argmax(-1)
 
     def next_seed(self, logits):
         return logits[:, -1].argmax(-1)
