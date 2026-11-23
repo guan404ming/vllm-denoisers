@@ -83,6 +83,7 @@ class BlockDiffusionSampler(CanvasSampler):
         kv: KvRuntime | None = None,
         inputs: InputPolicy | None = None,
         probe: Probe | None = None,
+        prefix_caching: bool = False,
     ):
         self.sampling_states = sampler.sampling_states
         self.logprob_token_ids_state = sampler.logprob_token_ids_state
@@ -103,6 +104,7 @@ class BlockDiffusionSampler(CanvasSampler):
         device = state.canvas.device
         super().__init__(max_num_reqs, state.block_length, device)
         self._need = torch.zeros(max_num_reqs, dtype=torch.int32, device=device)
+        self._max_seq_len = None if prefix_caching else torch.empty_like(self._need)
         self._need_host = torch.zeros(max_num_reqs, dtype=torch.int32, pin_memory=True)
         self._commit_host = torch.zeros(max_num_reqs, dtype=torch.bool, pin_memory=True)
         self._need_event = torch.cuda.Event()
@@ -117,6 +119,8 @@ class BlockDiffusionSampler(CanvasSampler):
     def add_request(self, req_idx: int, sampling_params) -> None:
         if use_penalty(sampling_params):
             logger.warning_once("denoisers ignores repetition, frequency, and presence penalties.")
+        if self._max_seq_len is not None:
+            self._max_seq_len[req_idx] = int(self.req_states.max_seq_len[req_idx])
         self.sampling_states.add_request(req_idx, sampling_params)
         self.logprob_token_ids_state.add_request(req_idx, sampling_params)
         if self.kv is not None:
@@ -311,8 +315,16 @@ class BlockDiffusionSampler(CanvasSampler):
         block = state.block_length
         slots_np = input_batch.idx_mapping_np[rows_np]
         before = state.gather(slots, policy.history_length)
+        remaining = None
+        if (
+            policy.fixed_revealed_tokens
+            and self._max_seq_len is not None
+            and logprob_args is None
+            and len(rows_np) == input_batch.num_reqs
+        ):
+            remaining = self._max_seq_len[slots] - self.req_states.total_len.gpu[slots]
         after, row_sampled, row_num_sampled, entropy = advance(
-            before, logits, policy, state.mask_id
+            before, logits, policy, state.mask_id, remaining
         )
         if self.inputs is not None:
             after.soft = self.inputs.soft(logits, have, before, after)

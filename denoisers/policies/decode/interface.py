@@ -19,6 +19,7 @@ class DecodePolicy(ABC):
     commit_logits = True
     sparse_logits = False
     shifted = False
+    fixed_revealed_tokens = False
     stop_exit = False
     dense_scores = False
 

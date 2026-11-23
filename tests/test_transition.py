@@ -3,6 +3,7 @@ import torch
 from support import make_rows
 
 from denoisers.canvas.transition import advance, final_prefix
+from denoisers.policies.decode.llada import LLaDA
 from denoisers.policies.decode.low_confidence import LowConfidence
 from denoisers.runtime.batch import prefill_block_ranges
 
@@ -87,3 +88,19 @@ def test_final_prefix_needs_every_cell_before_the_first_stop():
     stops = torch.tensor([[stop, -1], [stop, -1], [stop, -1], [stop, other], [stop, other]])
     found = final_prefix(canvas, shift, stops, MASK)
     assert found.tolist() == [True, False, False, False, True]
+
+
+@pytest.mark.parametrize(
+    ("remaining", "second_token", "counts"),
+    [([2, 1], MASK, [2, 1]), ([2, 2], MASK, [0, 0]), ([2, 4], 8, [0, 0])],
+)
+def test_terminal_prefix_waits_for_the_whole_batch(remaining, second_token, counts):
+    canvas = torch.tensor([[4, MASK, 8, MASK], [3, MASK, second_token, MASK]])
+    rows = make_rows(canvas, shift=[1, 1], mask_id=MASK)
+    logits = torch.zeros(2, 4, MASK + 1)
+    logits[:, 1, 7] = 20
+    policy = LLaDA(MASK, 4, 4, 4)
+    _, sampled, emitted, _ = advance(rows, logits, policy, MASK, torch.tensor(remaining))
+    assert emitted.tolist() == counts
+    expected = [[7, 8, 0, 0], [7, 0, 0, 0]] if counts[0] else [[0] * 4, [0] * 4]
+    assert sampled.tolist() == expected

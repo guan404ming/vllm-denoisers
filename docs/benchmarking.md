@@ -19,16 +19,15 @@ Select **one** launch command per run. Stop the previous server before starting 
 | `native` | `VLLM_PLUGINS='' vllm serve "${serve_args[@]}"` |
 | `plugin` | `VLLM_PLUGINS=denoisers vllm serve "${serve_args[@]}"` |
 | `probe` | `VLLM_PLUGINS=denoisers DENOISERS_HOLD=sjf DENOISERS_ACTIVE=32 vllm serve "${serve_args[@]}" --scheduler-cls resact` |
-| `auto` | `VLLM_PLUGINS=denoisers vllm serve "${serve_args[@]}" --scheduler-cls resact` |
 | `sjf` | `VLLM_PLUGINS=denoisers DENOISERS_HOLD=sjf DENOISERS_ACTIVE=16 vllm serve "${serve_args[@]}" --scheduler-cls resact` |
 
-Compare `native` with `plugin` to measure the runtime change. Compare `probe`, `auto`, and `sjf` to measure the effect of the active limit.
+Compare `native` with `plugin` to measure the runtime change. Compare `probe` with `sjf` to isolate the active limit.
 
 [![Compare native with plugin to measure the runtime change. Compare probe with sjf to measure the active limit with the same scheduler and probe.](assets/benchmark-comparisons.svg){ width="100%" }](assets/benchmark-comparisons.svg)
 
 ## Send the workload
 
-In a second terminal, set `run` to the server's run name. Use the same seed and prompts for all runs.
+In a second terminal, set `run` to the server's run name. Use the same seed and prompts for all four runs.
 
 ```bash
 run=native

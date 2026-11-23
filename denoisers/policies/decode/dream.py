@@ -47,6 +47,7 @@ def nucleus_stats(
 
 @registry.register("dream")
 class Dream(ScoreMovePolicy):
+    fixed_revealed_tokens = True
     shifted = True
     causal_prefill = False
 
