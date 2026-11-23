@@ -1,4 +1,3 @@
-import torch
 from PIL import Image, ImageOps
 from torch import nn
 from transformers import GlmImageConfig, GlmImageImageProcessor
@@ -18,8 +17,6 @@ from vllm.multimodal.processing import (
 from denoisers.models.image import ImageDummyInputs, ImageProcessingInfo
 from denoisers.models.llada2.model import LLaDA2MoeModelLM
 from denoisers.models.mixin import BlockDiffusionModel
-from denoisers.runtime.batch import per_token
-from denoisers.runtime.model_state import BlockDiffusionModelState
 
 IMAGE_START = "<|image|>"
 
@@ -83,26 +80,11 @@ class UniProcessor(BaseMultiModalProcessor[UniProcessingInfo]):
         return [PromptReplacement(modality="image", target=start, replacement=replacement)]
 
 
-class UniModelState(BlockDiffusionModelState):
-    def prepare_inputs_embeds(self, scheduled_encoder_inputs, input_batch, req_states):
-        if not self.supports_mm_inputs:
-            return
-        self.execute_mm_encoder(scheduled_encoder_inputs)
-        codes, mask = self.gather_mm_embeddings(input_batch)
-        if codes:
-            indices = mask.nonzero().flatten().to(self.device, non_blocking=True)
-            ids = torch.cat(codes).flatten().to(input_batch.input_ids.dtype)
-            slots = per_token(input_batch.idx_mapping[: input_batch.num_reqs], input_batch)
-            positions = input_batch.positions[indices]
-            input_batch.input_ids[indices] = ids
-            tokens = req_states.all_token_ids.gpu
-            tokens[slots[indices], positions] = ids.to(tokens.dtype)
-
-
 @MULTIMODAL_REGISTRY.register_processor(
     UniProcessor, info=UniProcessingInfo, dummy_inputs=ImageDummyInputs
 )
 class LLaDA2UniForImageUnderstanding(BlockDiffusionModel, nn.Module, SupportsMultiModal):
+    image_encoder_output = "token_ids"
     hf_to_vllm_mapper = WeightsMapper(
         orig_to_new_prefix={
             "image_tokenizer.model.visual.": "visual.",
@@ -135,10 +117,6 @@ class LLaDA2UniForImageUnderstanding(BlockDiffusionModel, nn.Module, SupportsMul
                 model.model, model.revision, subfolder="image_tokenizer", prefix="image_tokenizer."
             )
         ]
-
-    @staticmethod
-    def get_model_state_cls():
-        return UniModelState
 
     def input_embedding(self):
         return self.language_model.input_embedding()

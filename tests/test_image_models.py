@@ -7,8 +7,12 @@ from PIL import Image
 pytest.importorskip("vllm")
 
 from denoisers.models.llada2.config import LLaDA2MoeConfig
-from denoisers.models.llada2.uni import UniModelState, UniProcessor
-from denoisers.models.nemotron_diffusion.vlm import NemotronVLMProcessingInfo, NemotronVLMProcessor
+from denoisers.models.llada2.uni import LLaDA2UniForImageUnderstanding, UniProcessor
+from denoisers.models.nemotron_diffusion.vlm import (
+    NemotronLabsDiffusionVLMModel,
+    NemotronVLMProcessingInfo,
+    NemotronVLMProcessor,
+)
 from denoisers.policies.decode import registry
 
 
@@ -60,6 +64,8 @@ def test_uni_image_headers_match_the_patch_grid():
 
 def test_uni_keeps_image_codes_when_the_prompt_tail_is_decoded_again():
     state = SimpleNamespace(
+        model=LLaDA2UniForImageUnderstanding,
+        _inputs_embeds=torch.empty(0),
         device="cpu",
         supports_mm_inputs=True,
         execute_mm_encoder=lambda inputs: None,
@@ -78,10 +84,29 @@ def test_uni_keeps_image_codes_when_the_prompt_tail_is_decoded_again():
     )
     saved = torch.zeros(2, 8, dtype=torch.int32)
     requests = SimpleNamespace(all_token_ids=SimpleNamespace(gpu=saved))
-    UniModelState.prepare_inputs_embeds(state, {}, batch, requests)
+    runtime = LLaDA2UniForImageUnderstanding.get_model_state_cls()
+    runtime.prepare_inputs_embeds(state, {}, batch, requests)
     assert batch.input_ids.tolist() == [7, 157190, 157202, 8]
     assert saved[1, 6:].tolist() == [157190, 157202]
     assert saved[0].count_nonzero() == 0
+
+
+def test_embedding_encoder_stages_only_current_batch_features():
+    features = [torch.tensor([[1.0, 2.0]])]
+    mask = torch.tensor([True, False])
+    state = SimpleNamespace(
+        model=NemotronLabsDiffusionVLMModel,
+        supports_mm_inputs=True,
+        _inputs_embeds=torch.empty(2, 2),
+        execute_mm_encoder=lambda inputs: None,
+        gather_mm_embeddings=lambda batch: (batch, mask),
+    )
+    runtime = NemotronLabsDiffusionVLMModel.get_model_state_cls()
+    runtime.prepare_inputs_embeds(state, {}, features, None)
+    assert state._mm_embeds[0] is features
+    assert state._mm_embeds[1] is mask
+    runtime.prepare_inputs_embeds(state, {}, [], None)
+    assert state._mm_embeds is None
 
 
 def test_nemotron_vlm_opens_each_block_fully_masked():
