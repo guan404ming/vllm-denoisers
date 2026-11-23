@@ -4,6 +4,7 @@ from transformers import AutoModel, GenerationConfig
 from vllm.model_executor.models.utils import AutoWeightsLoader
 
 from denoisers.models.sigma.state import SigmaModelState
+from denoisers.models.sigma.steps import SigmaBlock
 
 
 class NemotronLabsSigmaModel(nn.Module):
@@ -17,6 +18,8 @@ class NemotronLabsSigmaModel(nn.Module):
             config.model, revision=config.revision
         )
         self.block = vllm_config.diffusion_config.canvas_length
+        self.pending = {}
+        self.embeddings = None
 
     @staticmethod
     def get_model_state_cls():
@@ -25,38 +28,27 @@ class NemotronLabsSigmaModel(nn.Module):
     def embed_input_ids(self, input_ids):
         return self.model.encoder.embed_tokens(input_ids)
 
-    def generate_block(self, prefix, width):
-        generation = self.model.generation_config
-        if getattr(generation, "decoding", None) == "self_speculative":
-            ids = self.model.generate_speculative(
-                prefix,
-                max_new_tokens=width,
-                draft_width=generation.draft_width,
-                diffusion_calls_per_round=generation.diffusion_calls_per_round,
-            )
-        else:
-            distilled = getattr(self.model.config, "native_family", None) == "phased_dmd"
-            ids, _ = self.model.generate(
-                prefix,
-                max_new_tokens=width,
-                block_length=self.block,
-                steps=self.model.config.native_nfe if distilled else 32,
-                sampler="fresh_x0" if distilled else "ddim",
-                time_schedule="log_snr",
-                guidance_scale=1.0 if distilled else 3.0,
-                score_temp=1.0 if distilled else 0.3,
-            )
-        return ids[0, prefix.shape[1] :]
-
     def forward(self, input_ids, positions, blocks=(), **kwargs):
-        tokens = torch.zeros_like(positions, dtype=torch.int32)
-        for start, width, prefix in blocks:
-            tokens[start : start + width] = self.generate_block(prefix, width)
+        tokens = torch.full_like(positions, -1, dtype=torch.int32)
+        for req_id, start, width, prefix in blocks:
+            progress = self.pending.get(req_id)
+            if progress is None or progress[0] != prefix.shape[1]:
+                if self.embeddings is None:
+                    self.embeddings = self.model.replaid_embedding_matrix().float()
+                steps = SigmaBlock(self.model, prefix.long(), self.embeddings).run()
+                self.pending[req_id] = (prefix.shape[1], steps)
+            else:
+                steps = progress[1]
+            result = next(steps)
+            if result is not None:
+                tokens[start : start + width] = result[:width]
+                del self.pending[req_id]
         return tokens.unsqueeze(1)
 
     def compute_logits(self, hidden_states):
         raise ValueError("Sigma returns sampled tokens directly.")
 
     def load_weights(self, weights):
+        self.embeddings = None
         loaded = AutoWeightsLoader(self.model).load_weights(weights)
         return {f"model.{name}" for name in loaded}

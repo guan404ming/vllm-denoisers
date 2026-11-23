@@ -1,33 +1,43 @@
 import numpy as np
 import torch
 from vllm.v1.worker.gpu.model_states.default import DefaultModelState
-from vllm.v1.worker.gpu.sample.output import SamplerOutput
+
+from denoisers.runtime.sampler import CanvasSampler
 
 
-class SigmaSampler:
-    def __init__(self, sampler, block):
+class SigmaSampler(CanvasSampler):
+    def __init__(self, sampler, max_num_reqs, block, device):
+        super().__init__(max_num_reqs, block, device)
         self.penalties_state = sampler.penalties_state
-        self.block = block
 
-    def add_request(self, slot, params):
+    def add_request(self, req_idx: int, sampling_params) -> None:
         pass
 
-    def apply_staged_writes(self):
+    def apply_staged_writes(self) -> None:
         pass
 
-    def __call__(self, tokens, input_batch):
-        widths = input_batch.cu_num_logits.diff()
-        sampled = tokens.new_zeros((input_batch.num_reqs, self.block))
-        rows = torch.arange(input_batch.num_reqs, device=tokens.device).repeat_interleave(
-            widths, output_size=tokens.numel()
+    def _decode(self, tokens, input_batch, rows, widths, sampled, num_sampled):
+        counts = input_batch.cu_num_logits.diff()[: input_batch.num_reqs]
+        row = torch.arange(input_batch.num_reqs, device=tokens.device).repeat_interleave(
+            counts, output_size=tokens.numel()
         )
-        sampled[rows, input_batch.expanded_local_pos.long()] = tokens.flatten()
-        return SamplerOutput(sampled, None, None, widths, torch.zeros_like(widths))
+        sampled[row, input_batch.expanded_local_pos.long()] = tokens.flatten()
+        complete = sampled[:, 0] >= 0
+        num_sampled.copy_(torch.where(complete, counts, 0))
+        sampled.clamp_min_(0)
 
 
 class SigmaModelState(DefaultModelState):
     supports_prompt_embeds = False
     num_new_sampled_tokens_per_step = 0
+
+    def add_request(self, req_index, new_req_data):
+        super().add_request(req_index, new_req_data)
+        self.model.pending.pop(new_req_data.req_id, None)
+
+    def remove_request(self, req_id):
+        self.model.pending.pop(req_id, None)
+        super().remove_request(req_id)
 
     def prepare_inputs(self, input_batch, req_states):
         blocks = []
@@ -37,15 +47,15 @@ class SigmaModelState(DefaultModelState):
                     slot = input_batch.idx_mapping_np[row]
                     end = input_batch.query_start_loc_np[row + 1]
                     length = input_batch.num_computed_tokens_np[row]
-                    prefix = req_states.all_token_ids.gpu[slot : slot + 1, :length].long()
-                    blocks.append((end - width, int(width), prefix))
+                    prefix = req_states.all_token_ids.gpu[slot : slot + 1, :length]
+                    blocks.append((input_batch.req_ids[row], end - width, width, prefix))
         return {"blocks": blocks}
 
     def compute_sample_logits(self, hidden_states):
         return hidden_states
 
     def custom_sampler(self, sampler):
-        return SigmaSampler(sampler, self.model.block), None
+        return SigmaSampler(sampler, self.max_num_reqs, self.model.block, self.device), None
 
     def dummy_sampler_run(self, sampler, hidden_states):
         return True

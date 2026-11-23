@@ -1,6 +1,5 @@
 import os
 from types import SimpleNamespace
-from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -16,49 +15,11 @@ from denoisers.models.sigma.params import SigmaSamplingParams
 from denoisers.models.sigma.state import SigmaModelState, SigmaSampler
 
 
-@pytest.mark.parametrize("steps", [None, 2, 4, 8, 16])
-def test_sigma_uses_checkpoint_recipe(steps):
-    prefix = torch.tensor([[7, 8]])
-    tokens = torch.tensor([[7, 8, 4, 3]])
-    model = Mock()
-    model.config.native_family = "phased_dmd" if steps else None
-    model.config.native_nfe = steps
-    model.generation_config.decoding = "blockwise_diffusion"
-    model.generate.return_value = tokens, 0
-    adapter = SimpleNamespace(model=model, block=32)
-
-    result = NemotronLabsSigmaModel.generate_block(adapter, prefix, 2)
-
-    model.generate.assert_called_once_with(
-        prefix,
-        max_new_tokens=2,
-        block_length=32,
-        steps=steps or 32,
-        sampler="fresh_x0" if steps else "ddim",
-        time_schedule="log_snr",
-        guidance_scale=1.0 if steps else 3.0,
-        score_temp=1.0 if steps else 0.3,
-    )
-    assert result.tolist() == [4, 3]
-
-
-def test_sigma_speculative_uses_ar_verifier():
-    model = Mock()
-    model.generation_config = SimpleNamespace(
-        decoding="self_speculative", draft_width=32, diffusion_calls_per_round=1
-    )
-    model.generate_speculative.return_value = torch.tensor([[7, 4, 3]])
-    prefix = torch.tensor([[7]])
-    result = NemotronLabsSigmaModel.generate_block(SimpleNamespace(model=model), prefix, 2)
-    model.generate_speculative.assert_called_once_with(
-        prefix, max_new_tokens=2, draft_width=32, diffusion_calls_per_round=1
-    )
-    assert result.tolist() == [4, 3]
-
-
 def test_sigma_reordered_rows_and_partial_block():
     batch = SimpleNamespace(
         num_reqs=3,
+        req_ids=["b", "prompt", "a"],
+        query_start_loc=torch.tensor([0, 3, 6, 8]),
         num_draft_tokens=5,
         idx_mapping_np=np.array([2, 0, 1]),
         query_start_loc_np=np.array([0, 3, 6, 8]),
@@ -69,14 +30,51 @@ def test_sigma_reordered_rows_and_partial_block():
     )
     states = SimpleNamespace(all_token_ids=SimpleNamespace(gpu=torch.arange(12).reshape(3, 4)))
     blocks = SigmaModelState.prepare_inputs(None, batch, states)["blocks"]
-    assert [(start, width, prefix.tolist()) for start, width, prefix in blocks] == [
-        (0, 3, [[8, 9]]),
-        (6, 2, [[4, 5, 6]]),
+    assert [(rid, start, width, prefix.tolist()) for rid, start, width, prefix in blocks] == [
+        ("b", 0, 3, [[8, 9]]),
+        ("a", 6, 2, [[4, 5, 6]]),
     ]
-    sampler = SigmaSampler(SimpleNamespace(penalties_state=None), 3)
-    out = sampler(torch.tensor([[2], [4], [6], [1], [3]]), batch)
-    assert out.num_sampled.tolist() == [3, 0, 2]
-    assert out.sampled_token_ids.tolist() == [[2, 4, 6], [0, 0, 0], [1, 3, 0]]
+    sampler = SigmaSampler(SimpleNamespace(penalties_state=None), 3, 3, "cpu")
+    out = sampler(torch.tensor([[-1], [-1], [-1], [1], [3]], dtype=torch.int32), batch)
+    assert out.num_sampled.tolist() == [0, 0, 2]
+    assert out.num_rejected.tolist() == [3, 0, 0]
+    assert out.sampled_token_ids.tolist() == [[0, 0, 0], [0, 0, 0], [1, 3, 0]]
+
+
+def test_sigma_resumes_by_request_and_discards_cancelled_state(monkeypatch):
+    started = []
+
+    class Block:
+        def __init__(self, model, prefix, embeddings):
+            self.token = prefix[0, -1]
+            started.append(int(self.token))
+
+        def run(self):
+            yield None
+            yield self.token.repeat(3)
+
+    monkeypatch.setattr("denoisers.models.sigma.model.SigmaBlock", Block)
+    model = SimpleNamespace(pending={}, embeddings=torch.zeros(1), model=None)
+    state = object.__new__(SigmaModelState)
+    state.model = model
+    state.rope_state = None
+    state.prompt_embeds_state = None
+    positions = torch.arange(4)
+    a = ("a", 0, 2, torch.tensor([[7]]))
+    b = ("b", 2, 2, torch.tensor([[8]]))
+    forward = NemotronLabsSigmaModel.forward
+    assert forward(model, None, positions, [a, b]).flatten().tolist() == [-1] * 4
+    SigmaModelState.remove_request(state, "b")
+    replacement = ("b", 0, 2, torch.tensor([[9]]))
+    moved = ("a", 2, 1, a[3])
+    assert forward(model, None, positions, [replacement, moved]).flatten().tolist() == [
+        -1,
+        -1,
+        7,
+        -1,
+    ]
+    assert started == [7, 8, 9]
+    assert list(model.pending) == ["b"]
 
 
 def test_sigma_base_loads_exported_schedule():

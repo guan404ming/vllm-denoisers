@@ -38,7 +38,41 @@ def _output(sampled, num_sampled, num_rejected, logprobs=None) -> SamplerOutput:
     )
 
 
-class BlockDiffusionSampler:
+class CanvasSampler:
+    def __init__(self, max_num_reqs, block_length, device):
+        self._sampled = torch.zeros(max_num_reqs, block_length, dtype=torch.int32, device=device)
+        self._num_sampled = torch.zeros(max_num_reqs, dtype=torch.int32, device=device)
+
+    def _finish_prefills(self, input_batch, rows):
+        pass
+
+    def _decode(self, hidden, input_batch, rows, widths, sampled, num_sampled):
+        raise NotImplementedError
+
+    def __call__(self, hidden, input_batch, draft_logits=None) -> SamplerOutput:
+        num_reqs = input_batch.num_reqs
+        sampled = self._sampled[:num_reqs]
+        num_sampled = self._num_sampled[:num_reqs]
+        sampled.zero_()
+        num_sampled.zero_()
+        if input_batch.num_draft_tokens == 0:
+            self._finish_prefills(input_batch, np.arange(num_reqs))
+            return _output(sampled[:, :1], num_sampled, num_sampled)
+
+        widths = np.diff(input_batch.cu_num_logits_np[: num_reqs + 1])
+        self._finish_prefills(input_batch, np.where(widths == 0)[0])
+        rows_np = np.where(widths > 0)[0]
+        if len(rows_np) == 0:
+            return _output(sampled[:, :1], num_sampled, num_sampled)
+
+        logprobs = self._decode(hidden, input_batch, rows_np, widths[rows_np], sampled, num_sampled)
+        num_logits = input_batch.cu_num_logits[: num_reqs + 1].diff()
+        is_denoise = (num_logits > 0) & (num_sampled == 0)
+        rejected = torch.where(is_denoise, query_lens(input_batch), num_logits - num_sampled)
+        return _output(sampled, num_sampled, rejected.to(num_sampled.dtype), logprobs)
+
+
+class BlockDiffusionSampler(CanvasSampler):
     def __init__(
         self,
         sampler,
@@ -68,10 +102,7 @@ class BlockDiffusionSampler:
         self.probe = probe
         max_num_reqs = state.canvas.shape[0]
         device = state.canvas.device
-        self._sampled = torch.zeros(
-            max_num_reqs, state.block_length, dtype=torch.int32, device=device
-        )
-        self._num_sampled = torch.zeros(max_num_reqs, dtype=torch.int32, device=device)
+        super().__init__(max_num_reqs, state.block_length, device)
         self._need = torch.zeros(max_num_reqs, dtype=torch.int32, device=device)
         self._need_host = torch.zeros(max_num_reqs, dtype=torch.int32, pin_memory=True)
         self._commit_host = torch.zeros(max_num_reqs, dtype=torch.bool, pin_memory=True)
@@ -122,6 +153,7 @@ class BlockDiffusionSampler:
         torch.empty_like(self.compute_logits(hidden_states[:rows]))
 
     def _finish_prefills(self, input_batch, rows: np.ndarray) -> None:
+        self._need_event.synchronize()
         done = (
             input_batch.num_computed_prefill_tokens_np[rows]
             + input_batch.num_scheduled_tokens[rows]
@@ -382,26 +414,9 @@ class BlockDiffusionSampler:
             )
         return parts
 
-    def __call__(self, hidden, input_batch, draft_logits=None) -> SamplerOutput:
-        num_reqs = input_batch.num_reqs
-        sampled = self._sampled[:num_reqs]
-        num_sampled = self._num_sampled[:num_reqs]
-        sampled.zero_()
-        num_sampled.zero_()
-        self._need_event.synchronize()
-        if input_batch.num_draft_tokens == 0:
-            self._finish_prefills(input_batch, np.arange(num_reqs))
-            return _output(sampled[:, :1], num_sampled, num_sampled)
-
-        num_logits_np = np.diff(input_batch.cu_num_logits_np[: num_reqs + 1])
-        self._finish_prefills(input_batch, np.where(num_logits_np == 0)[0])
-        rows_np = np.where(num_logits_np > 0)[0]
-        if len(rows_np) == 0:
-            return _output(sampled[:, :1], num_sampled, num_sampled)
-
+    def _decode(self, hidden, input_batch, rows_np, widths_np, sampled, num_sampled):
         block = self.state.block_length
         device = hidden.device
-        widths_np = num_logits_np[rows_np]
         ends_np = np.cumsum(widths_np)
         slots_np = input_batch.idx_mapping_np[rows_np]
         max_logprobs = self.sampling_states.max_num_logprobs(slots_np)
@@ -437,7 +452,7 @@ class BlockDiffusionSampler:
         if parts:
             by_row = dict(parts)
             cu_gen, offset, found = [], 0, []
-            for i in range(num_reqs):
+            for i in range(input_batch.num_reqs):
                 cu_gen.append(offset)
                 if i in by_row:
                     found.append(by_row[i])
@@ -449,7 +464,4 @@ class BlockDiffusionSampler:
                 cu_num_generated_tokens=cu_gen,
             )
 
-        num_logits = async_tensor_h2d(num_logits_np, device=device)
-        is_denoise = (num_logits > 0) & (num_sampled == 0)
-        num_rejected = torch.where(is_denoise, query_lens(input_batch), num_logits - num_sampled)
-        return _output(sampled, num_sampled, num_rejected.to(num_sampled.dtype), logprobs)
+        return logprobs
