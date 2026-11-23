@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="126" viewBox="0 0 680 126" role="img" aria-labelledby="title desc">
+  <title id="title">Prompt alignment</title>
+  <desc id="desc">With four positions per block, the last two tokens of a six-token prompt share the first response canvas with two masks.</desc>
+  <style>
+    :root { color-scheme: light dark; color: CanvasText; }
+    text { fill: currentColor; font-family: Inter, system-ui, sans-serif; }
+    .label { font-size: 18px; font-weight: 500; }
+    .detail { font-size: 15px; }
+    .line { fill: none; stroke: currentColor; stroke-opacity: .32; }
+    .icon { fill: none; stroke: #1976bd; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) { .icon { stroke: #53b2ff; } }
+  </style>
+  <rect class="line" x=".5" y="6" width="679" height="114" rx="12"/>
+  <path class="line" d="M340 6v114"/>
+  <path class="icon" transform="translate(24 30)" d="M1 1h18v18H1z M10 1v18 M1 10h18"/>
+  <text class="label" x="55" y="46" text-anchor="start">Prompt block</text>
+  <path class="icon" transform="translate(364 30)" d="M1 1h18v18H1z M10 1v18 M1 10h18"/>
+  <text class="label" x="395" y="46" text-anchor="start">First response canvas</text>
+  <rect class="line" x="24" y="65" width="65" height="34" rx="6"/>
+  <text class="detail" x="56.5" y="87" text-anchor="middle">P1</text>
+  <rect class="line" x="97" y="65" width="65" height="34" rx="6"/>
+  <text class="detail" x="129.5" y="87" text-anchor="middle">P2</text>
+  <rect class="line" x="170" y="65" width="65" height="34" rx="6"/>
+  <text class="detail" x="202.5" y="87" text-anchor="middle">P3</text>
+  <rect class="line" x="243" y="65" width="65" height="34" rx="6"/>
+  <text class="detail" x="275.5" y="87" text-anchor="middle">P4</text>
+  <rect class="line" x="364" y="65" width="65" height="34" rx="6"/>
+  <text class="detail" x="396.5" y="87" text-anchor="middle">P5</text>
+  <rect class="line" x="437" y="65" width="65" height="34" rx="6"/>
+  <text class="detail" x="469.5" y="87" text-anchor="middle">P6</text>
+  <rect class="line" x="510" y="65" width="65" height="34" rx="6" stroke-dasharray="4 3"/>
+  <text class="detail" x="542.5" y="87" text-anchor="middle">mask</text>
+  <rect class="line" x="583" y="65" width="65" height="34" rx="6" stroke-dasharray="4 3"/>
+  <text class="detail" x="615.5" y="87" text-anchor="middle">mask</text>
+</svg>

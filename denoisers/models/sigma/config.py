@@ -1,6 +1,8 @@
 from vllm.config.diffusion import DiffusionConfig
 from vllm.model_executor.models.config import VerifyAndUpdateConfig
 
+from denoisers.scheduler import select_scheduler
+
 
 class SigmaModelConfig(VerifyAndUpdateConfig):
     @staticmethod
@@ -32,3 +34,4 @@ class SigmaModelConfig(VerifyAndUpdateConfig):
         if scheduler.async_scheduling:
             raise ValueError("Sigma needs --no-async-scheduling.")
         scheduler.async_scheduling = False
+        select_scheduler(scheduler)

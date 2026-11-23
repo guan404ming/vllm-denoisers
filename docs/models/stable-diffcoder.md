@@ -1,10 +1,17 @@
-# Stable-DiffCoder
+---
+icon: model-org
+organization: ByteDance-Seed
+---
+
+# [![](../assets/orgs/ByteDance-Seed.webp){ .org-avatar width="30" height="30" }](https://huggingface.co/collections/ByteDance-Seed/stable-diffcoder){ aria-label="Stable-DiffCoder models on Hugging Face" target="_blank" rel="noopener" } Stable-DiffCoder
+
+[ByteDance-Seed/Stable-DiffCoder](https://huggingface.co/collections/ByteDance-Seed/stable-diffcoder){ target="_blank" rel="noopener" }
 
 ## Serve
 
 ```bash
 vllm serve ByteDance-Seed/Stable-DiffCoder-8B-Instruct \
-  --attention-backend TRITON_ATTN --block-size 16 --no-enable-chunked-prefill \
+  --attention-backend TRITON_ATTN --block-size 16 \
   --generation-config vllm
 ```
 

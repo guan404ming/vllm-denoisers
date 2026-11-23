@@ -1,10 +1,17 @@
-# Fast-dLLM v2
+---
+icon: model-org
+organization: Efficient-Large-Model
+---
+
+# [![](../assets/orgs/Efficient-Large-Model.webp){ .org-avatar width="30" height="30" }](https://huggingface.co/collections/Efficient-Large-Model/fast-dllm){ aria-label="Fast-dLLM v2 models on Hugging Face" target="_blank" rel="noopener" } Fast-dLLM v2
+
+[Efficient-Large-Model/Fast-dLLM](https://huggingface.co/collections/Efficient-Large-Model/fast-dllm){ target="_blank" rel="noopener" }
 
 ## Serve
 
 ```bash
 vllm serve Efficient-Large-Model/Fast_dLLM_v2_7B \
-  --attention-backend TRITON_ATTN --block-size 32 --no-enable-chunked-prefill \
+  --attention-backend TRITON_ATTN --block-size 32 \
   --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 --generation-config vllm
 ```
 

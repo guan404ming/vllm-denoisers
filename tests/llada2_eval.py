@@ -142,7 +142,7 @@ def vllm_generate(
     }
     if active:
         os.environ["DENOISERS_ACTIVE"] = str(active)
-        args["scheduler_cls"] = "denoisers.scheduler.resident_active.DenoisersAsyncScheduler"
+        args["scheduler_cls"] = "resact"
         args["async_scheduling"] = True
     args.update(engine or {})
     llm = LLM(model=model_id, hf_overrides=hf_overrides, tensor_parallel_size=tp, **args)
@@ -299,7 +299,6 @@ def features(
         "enable_chunked_prefill": True,
         "max_num_batched_tokens": 48,
         "max_num_seqs": 1,
-        "scheduler_cls": "denoisers.scheduler.resident_active.DenoisersAsyncScheduler",
         "async_scheduling": True,
     }
     sampled = {"top_p": 0.9, "top_k": 50, "logprobs": 2}

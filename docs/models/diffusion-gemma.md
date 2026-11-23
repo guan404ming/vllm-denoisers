@@ -1,4 +1,11 @@
-# DiffusionGemma
+---
+icon: model-org
+organization: google
+---
+
+# [![](../assets/orgs/google.webp){ .org-avatar width="30" height="30" }](https://huggingface.co/collections/google/diffusiongemma){ aria-label="DiffusionGemma models on Hugging Face" target="_blank" rel="noopener" } DiffusionGemma
+
+[google/DiffusionGemma](https://huggingface.co/collections/google/diffusiongemma){ target="_blank" rel="noopener" }
 
 ## Serve
 

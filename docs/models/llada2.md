@@ -1,8 +1,32 @@
-# LLaDA2
+---
+icon: model-org
+organization: inclusionAI
+---
+
+# [![](../assets/orgs/inclusionAI.webp){ .org-avatar width="30" height="30" }](https://huggingface.co/collections/inclusionAI/llada20){ aria-label="LLaDA2 models on Hugging Face" target="_blank" rel="noopener" } LLaDA2
+
+[inclusionAI/LLaDA2.0](https://huggingface.co/collections/inclusionAI/llada20){ target="_blank" rel="noopener" } · [inclusionAI/LLaDA2.1](https://huggingface.co/collections/inclusionAI/llada21){ target="_blank" rel="noopener" } · [inclusionAI/LLaDA2.2](https://huggingface.co/collections/inclusionAI/llada22){ target="_blank" rel="noopener" }
 
 ## Serve
 
-Run the [quick start](../quickstart.md#start-the-server) with `inclusionAI/LLaDA2.0-mini`.
+```bash
+vllm serve inclusionAI/LLaDA2.0-mini \
+  --attention-backend TRITON_ATTN --block-size 32 \
+  --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 \
+  --generation-config vllm
+```
+
+## Image input
+
+```bash
+vllm serve inclusionAI/LLaDA2.0-Uni \
+  --attention-backend TRITON_ATTN --block-size 32 \
+  --max-model-len 8192 --max-num-seqs 4 --max-num-batched-tokens 8192 --generation-config vllm
+```
+
+- Send `image_url` and `text` items in the user message’s `content` array to `POST /v1/chat/completions`. The model returns text.
+- Send one image per request. The visual tokenizer converts image patches to discrete codes.
+- Keep the checkpoint’s `image_tokenizer/` directory when serving local weights.
 
 ## Decoding
 
@@ -17,4 +41,3 @@ Run the [quick start](../quickstart.md#start-the-server) with `inclusionAI/LLaDA
 - Mini and flash default to 32-token canvases. Tune `confidence_threshold` for unmasking and `editing_threshold` for edits.
 - Indel loop recovery resamples the lowest-confidence changed position. The reference picks one at random.
 - LLaDA2.2 requires unquantized MoE kernels and disabled expert load balancing. Its fast tokenizer supports plain text only (no reference tool rendering or long-text chunking).
-- The Uni checkpoint accepts one image per request. See [image understanding](../models.md#image-understanding) for launch settings.

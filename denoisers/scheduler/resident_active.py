@@ -2,11 +2,10 @@ import os
 import time
 
 from vllm.logger import init_logger
-from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
 
 from denoisers.policies.hold import PRIOR, registry
-from denoisers.runtime.batch import aligned_prefill_chunk
 from denoisers.scheduler import probe
+from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
 
 logger = init_logger("vllm.denoisers")
 
@@ -14,22 +13,23 @@ HOLD = os.environ.get("DENOISERS_HOLD", "sjf")
 ACTIVE = int(os.environ.get("DENOISERS_ACTIVE", "16"))
 
 
-class _Denoisers:
-    aligns_denoiser_prefill = True
+class ResidentActiveScheduler(AlignedScheduler):
     uses_denoiser_scores = True
+
+    def __new__(cls, vllm_config, *args, **kwargs):
+        if cls is ResidentActiveScheduler:
+            cls = (
+                DenoisersAsyncScheduler
+                if vllm_config.scheduler_config.async_scheduling
+                else DenoisersScheduler
+            )
+        return super().__new__(cls, vllm_config, *args, **kwargs)
 
     def __init__(self, vllm_config, *args, **kwargs):
         super().__init__(vllm_config, *args, **kwargs)
-        self.need_mamba_block_aligned_split = True
         self.hold = registry.resolve(HOLD).from_env()
         self.scores = probe.ScoreTable(
             probe.table_path(vllm_config), vllm_config.scheduler_config.max_num_seqs
-        )
-
-    def _mamba_block_aligned_split(self, request, num_new_tokens, *computed) -> int:
-        start = request.num_computed_tokens + sum(computed)
-        return aligned_prefill_chunk(
-            start, num_new_tokens, request.num_prompt_tokens, self.num_spec_tokens
         )
 
     def schedule(self, throttle_prefills=False):
@@ -58,9 +58,9 @@ class _Denoisers:
         return super().schedule(throttle_prefills)
 
 
-class DenoisersScheduler(_Denoisers, DiffusionScheduler):
+class DenoisersScheduler(ResidentActiveScheduler):
     pass
 
 
-class DenoisersAsyncScheduler(_Denoisers, DiffusionAsyncScheduler):
+class DenoisersAsyncScheduler(ResidentActiveScheduler, AlignedAsyncScheduler):
     pass

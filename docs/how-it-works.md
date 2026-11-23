@@ -1,13 +1,23 @@
-# How decoding works
+# Block decoding
 
-A canvas is a block of token positions that a request refines together. The shared runtime keeps a separate canvas for each request. Token-canvas models refine discrete tokens. Continuous-latent models refine latent states and decode them into tokens.
+Each request refines one block at a time. Token-canvas models update tokens directly. Continuous-latent models refine latent states before decoding them into tokens. The example below follows a token-canvas model with four positions per block.
 
-For token-canvas models:
+## Prompt alignment
 
-1. **Prefill.** The model reads the prompt. For block-aligned policies, a partial prompt block shares the first canvas with the start of the response.
-2. **Denoise.** The model scores the canvas. The decode policy fills masks, edits tokens, or applies fresh noise. The runtime schedules the same block again while the policy still has work.
-3. **Commit.** Once the block is ready, the runtime emits its response tokens and starts the next canvas. A streaming client can receive multiple tokens together. A partial prompt block contributes only its generated portion.
+With block-aligned decoding, the prompt can end partway through a block. A six-token prompt fills the first block and leaves P5 and P6 in the next one. The model can generate two tokens in that block before it needs a fresh canvas.
 
-For example, with a canvas of four and a six-token prompt, the first four prompt tokens form a full block. The last two prompt tokens occupy the first two positions of the next block. That canvas can produce two new tokens before the next four-position canvas begins.
+[![P1 through P4 fill the first block. P5 and P6 share the next block with two response positions.](assets/prompt-alignment.svg){ width="100%" }](assets/prompt-alignment.svg)
 
-A KV policy can reuse keys and values at selected positions between steps. An input policy can feed a weighted token embedding into the next step. The [architecture guide](architecture.md) shows where these decisions enter the runtime.
+## Canvas updates
+
+Each `mask` marks an open response position. On each pass, the model scores candidate tokens and the decode policy chooses which positions to update. Here it fills A first and B on a later pass. Other policies can fill several positions together or revise an earlier prediction.
+
+[![Three token-canvas snapshots show two masked positions becoming A and B.](assets/block-decoding.svg){ width="100%" }](assets/block-decoding.svg)
+
+## Output at commit
+
+While the block is in progress, the sampler reports zero output tokens to vLLM. At commit, it returns A and B together. P5 and P6 already belong to the prompt. If generation continues, the next block has four positions available for the response.
+
+[![The sampler reports zero output tokens during denoising and two tokens, A and B, at commit.](assets/block-output.svg){ width="100%" }](assets/block-output.svg)
+
+[Decode policies](decode-policies.md) · [Runtime architecture](architecture.md)

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="128" viewBox="0 0 680 128" role="img" aria-labelledby="title desc">
+  <title id="title">Output at commit</title>
+  <desc id="desc">Denoising returns zero tokens while the canvas changes. Commit emits A and B, the two generated tokens.</desc>
+  <style>
+    :root { color-scheme: light dark; color: CanvasText; }
+    text { fill: currentColor; font-family: Inter, system-ui, sans-serif; }
+    .label { font-size: 18px; font-weight: 500; }
+    .detail { font-size: 15px; }
+    .line { fill: none; stroke: currentColor; stroke-opacity: .32; }
+    .icon { fill: none; stroke: #1976bd; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) { .icon { stroke: #53b2ff; } }
+  </style>
+  <rect class="line" x=".5" y="6" width="679" height="116" rx="12"/>
+  <path class="line" d="M340 6v116"/>
+  <path class="icon" transform="translate(24 30)" d="M2 9a8 8 0 1 1 2 8 M2 3v6h6"/>
+  <text class="label" x="55" y="46" text-anchor="start">During denoising</text>
+  <text class="detail" x="24" y="89" text-anchor="start">0 tokens emitted</text>
+  <path class="icon" transform="translate(364 30)" d="M2 10l5 5L18 4"/>
+  <text class="label" x="395" y="46" text-anchor="start">At commit</text>
+  <rect class="line" x="364" y="66" width="56" height="34" rx="6"/>
+  <text class="detail" x="392.0" y="88" text-anchor="middle">A</text>
+  <rect class="line" x="428" y="66" width="56" height="34" rx="6"/>
+  <text class="detail" x="456.0" y="88" text-anchor="middle">B</text>
+  <text class="detail" x="500" y="88" text-anchor="start">2 tokens emitted</text>
+</svg>

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="127" viewBox="0 0 680 127" role="img" aria-labelledby="title desc">
+  <title id="title">A joint editing pass</title>
+  <desc id="desc">A full response canvas contains A and B. The editing pass replaces B with C. Once the canvas settles, commit emits A and C.</desc>
+  <style>
+    :root { color-scheme: light dark; color: CanvasText; }
+    text { fill: currentColor; font-family: Inter, system-ui, sans-serif; }
+    .label { font-size: 18px; font-weight: 500; }
+    .detail { font-size: 15px; }
+    .line { fill: none; stroke: currentColor; stroke-opacity: .32; }
+    .icon { fill: none; stroke: #1976bd; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    @media (prefers-color-scheme: dark) { .icon { stroke: #53b2ff; } }
+  </style>
+  <rect class="line" x=".5" y="6" width="679" height="115" rx="12"/>
+  <path class="line" d="M227 6v115 M454 6v115"/>
+  <path class="icon" transform="translate(24 30)" d="M1 1h18v18H1z M10 1v18 M1 10h18"/>
+  <text class="label" x="54" y="46" text-anchor="start">Masks filled</text>
+  <rect class="line" x="24" y="65" width="56" height="34" rx="6"/>
+  <text class="detail" x="52.0" y="87" text-anchor="middle">A</text>
+  <rect class="line" x="88" y="65" width="56" height="34" rx="6"/>
+  <text class="detail" x="116.0" y="87" text-anchor="middle">B</text>
+  <path class="icon" transform="translate(251 30)" d="M2 9a8 8 0 1 1 2 8 M2 3v6h6"/>
+  <text class="label" x="281" y="46" text-anchor="start">Edit B to C</text>
+  <rect class="line" x="251" y="65" width="56" height="34" rx="6"/>
+  <text class="detail" x="279.0" y="87" text-anchor="middle">A</text>
+  <rect class="line" x="315" y="65" width="56" height="34" rx="6"/>
+  <text class="detail" x="343.0" y="87" text-anchor="middle">C</text>
+  <path class="icon" transform="translate(478 30)" d="M2 10l5 5L18 4"/>
+  <text class="label" x="508" y="46" text-anchor="start">Commit</text>
+  <rect class="line" x="478" y="65" width="56" height="34" rx="6"/>
+  <text class="detail" x="506.0" y="87" text-anchor="middle">A</text>
+  <rect class="line" x="542" y="65" width="56" height="34" rx="6"/>
+  <text class="detail" x="570.0" y="87" text-anchor="middle">C</text>
+</svg>

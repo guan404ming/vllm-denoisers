@@ -6,7 +6,7 @@
 
 ```bash
 vllm serve inclusionAI/LLaDA2.0-mini \
-  --attention-backend TRITON_ATTN --block-size 32 --no-enable-chunked-prefill \
+  --attention-backend TRITON_ATTN --block-size 32 \
   --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 \
   --generation-config vllm
 ```

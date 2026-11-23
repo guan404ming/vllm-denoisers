@@ -1,13 +1,12 @@
 # User guide
 
-1. [Install the plugin](installation.md) in the environment that runs vLLM.
-2. [Start the server and send a request](quickstart.md).
-3. [Find your model](models.md) for checkpoint-specific options and differences from its reference sampler.
+## Core Concepts
+
+- [Block decoding](how-it-works.md) · Follow a block of tokens from prompt prefill through denoising to output.
+- [Decode policies](decode-policies.md) · Compare the rules for filling masks and revising tokens.
 
 ## Serving
 
-- [Batch and canvas limits](serving.md)
-- [Request scheduling](scheduling.md)
-- [KV cache reuse](kv-cache.md)
-
-See [How decoding works](how-it-works.md) for the denoising loop.
+- [Batch and canvas limits](serving.md) · Set the batch token budget for the canvas size and number of concurrent requests.
+- [Request scheduling](scheduling.md) · Choose which requests advance at each decoding step.
+- [KV cache reuse](kv-cache.md) · Choose which token positions to recompute between full passes.

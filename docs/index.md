@@ -1,10 +1,12 @@
-# <img src="assets/denoisers.svg" width="40" height="40" alt="" style="vertical-align: -0.2em"> vllm-denoisers
+# <img src="assets/denoisers.svg" width="40" height="40" alt="" style="vertical-align: text-bottom; margin-inline-end: 0.15em"> vllm-denoisers
 
 Use vLLM to serve models that generate text by refining a block of tokens over several steps.
 
 ## Components
 
 [![The scheduler selects requests for model adapters. Token-canvas models use decode policies and optional KV reuse. The shared sampler reports emitted tokens to vLLM.](assets/components.svg)](assets/components.svg)
+
+[Browse configurable components](components/index.md).
 
 ## How it works
 
