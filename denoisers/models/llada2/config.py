@@ -43,6 +43,17 @@ class LLaDA2MoeConfig(DecodeConfig, PretrainedConfig):
         self.max_post_steps = max_post_steps
         self.max_steps_per_block = max_steps_per_block
         super().__init__(**kwargs)
+        if getattr(self, "image_token_offset", None) is not None and self.architectures == [
+            "LLaDA2MoeModelLM"
+        ]:
+            self.architectures = ["LLaDA2UniForImageUnderstanding"]
+            self.embedding_dropout = 0.0
+            self.tie_word_embeddings = False
+            self.use_rmsnorm = True
+            self.norm_topk_prob = True
+            self.score_function = "sigmoid"
+            self.moe_router_enable_expert_bias = True
+            self.router_dtype = "fp32"
 
     def verify(self, vllm_config) -> None:
         if self.block_size not in (None, self.canvas_length):

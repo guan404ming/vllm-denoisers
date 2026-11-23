@@ -4,10 +4,11 @@ from denoisers.ops.sampling import sample
 from denoisers.policies.decode.interface import ScoreMovePolicy, registry
 
 
-@registry.register("nemotron_diffusion")
-class NemotronDiffusion(ScoreMovePolicy):
+@registry.register("nemotron_vlm")
+class NemotronVLMDiffusion(ScoreMovePolicy):
     aligned = False
     causal_commit = True
+    commit_logits = False
     temperature = 0.0
 
     def __init__(self, model, mask_id: int, threshold: float | None):
@@ -18,15 +19,6 @@ class NemotronDiffusion(ScoreMovePolicy):
     @classmethod
     def from_config(cls, config, model):
         return cls(model, config.mask_token_id, config.confidence_threshold)
-
-    def init_canvas(self, canvas, slots=None, first=False):
-        if first:
-            logits = self.model.compute_logits(self.model.prompt_hidden[slots])
-            canvas[:, 0] = logits.argmax(-1)
-        return canvas
-
-    def next_seed(self, logits):
-        return logits[:, -1].argmax(-1)
 
     def score(self, logits, noise=None, active=None):
         tokens, confidence = sample(logits, self.mask_id, self.temperature, active, noise)
@@ -39,3 +31,17 @@ class NemotronDiffusion(ScoreMovePolicy):
         chosen.scatter_(1, best, True)
         after = torch.where(masked & chosen, tokens, canvas)
         return after, ~(after == self.mask_id).any(-1)
+
+
+@registry.register("nemotron_diffusion")
+class NemotronDiffusion(NemotronVLMDiffusion):
+    commit_logits = True
+
+    def init_canvas(self, canvas, slots=None, first=False):
+        if first:
+            logits = self.model.compute_logits(self.model.prompt_hidden[slots])
+            canvas[:, 0] = logits.argmax(-1)
+        return canvas
+
+    def next_seed(self, logits):
+        return logits[:, -1].argmax(-1)

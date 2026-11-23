@@ -70,6 +70,8 @@ class BlockDiffusionModelState(ModelState):
         self._seq_lens = torch.zeros(self.max_num_reqs, dtype=torch.int32, device=device)
         self._positions = torch.zeros(self.max_num_tokens, dtype=torch.int64, device=device)
         self._block_ids = torch.zeros(self.max_num_tokens, dtype=torch.int64, device=device)
+        if self.supports_mm_inputs and hidden_size is None:
+            hidden_size = self.inputs_embeds_size
         self._inputs_embeds = (
             None
             if hidden_size is None
@@ -156,7 +158,7 @@ class BlockDiffusionModelState(ModelState):
                     input_ids, multimodal_embeddings=mm_embeds, is_multimodal=is_mm_embed
                 )
             )
-        if input_batch.num_draft_tokens == 0:
+        if self.inputs is None or input_batch.num_draft_tokens == 0:
             return embeds
         num_reqs = input_batch.num_reqs
         num_logits = np.diff(input_batch.cu_num_logits_np[: num_reqs + 1])

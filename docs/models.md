@@ -20,6 +20,21 @@
 | `LLaDA2.1-mini`, `-flash` | `joint` | `--hf-overrides '{"decode_policy": "joint"}'` |
 | `LLaDA2.2-mini`, `-flash` | `indel` | chosen from `expert_capacity`; block routing |
 
+## Image understanding
+
+Serve either checkpoint with the V2 model runner.
+
+```bash
+VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Diffusion-VLM-8B \
+  --attention-backend TRITON_ATTN --block-size 32 --no-enable-chunked-prefill \
+  --max-model-len 8192 --max-num-seqs 4 --max-num-batched-tokens 8192 --generation-config vllm
+```
+
+For LLaDA, set the model to `inclusionAI/LLaDA2.0-Uni`. Send an `image_url` and a text question to `/v1/chat/completions`. Both models return text.
+
+- Nemotron uses a Pixtral vision encoder. Each unseeded 32-token response block starts fully masked. See the [NVIDIA checkpoint](https://huggingface.co/nvidia/Nemotron-Labs-Diffusion-VLM-8B).
+- LLaDA2.0-Uni accepts one image per request. Its visual tokenizer converts patches to discrete codes before block diffusion. Keep the checkpoint's `image_tokenizer/` directory when serving local weights. See the [inclusionAI checkpoint](https://huggingface.co/inclusionAI/LLaDA2.0-Uni).
+
 ## Stable-DiffCoder (Llama)
 
 The 8B Base and Instruct checkpoints use four-token blocks and mask ID 5. Greedy decoding fills the most confident masked position on each step, including when the prompt ends inside a block. The default threshold of 1.0 reproduces the fixed transfer count in the [official examples](https://github.com/ByteDance-Seed/Stable-DiffCoder).

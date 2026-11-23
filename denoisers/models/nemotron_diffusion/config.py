@@ -1,4 +1,4 @@
-from transformers import LlamaConfig
+from transformers import LlamaConfig, Mistral3Config, PreTrainedTokenizerFast
 
 from denoisers.models.config import DecodeConfig
 
@@ -33,3 +33,28 @@ class NemotronLabsDiffusionConfig(DecodeConfig, LlamaConfig):
     def verify(self, vllm_config):
         if self.temperature != 0:
             raise ValueError("Nemotron diffusion currently supports greedy sampling.")
+
+
+class NemotronLabsDiffusionVLMConfig(DecodeConfig, Mistral3Config):
+    model_type = "nemotron_labs_diffusion_vlm"
+
+    def __init__(
+        self, text_config=None, block_size=32, mask_token_id=100, confidence_threshold=0.9, **kwargs
+    ):
+        if text_config is None:
+            text_config = NemotronLabsDiffusionConfig(
+                **{**kwargs, "architectures": ["MistralForCausalLM"]}
+            )
+        for name in ("rope_parameters", "rope_scaling", "rope_theta"):
+            kwargs.pop(name, None)
+        kwargs.setdefault("image_token_index", 19)
+        super().__init__(text_config=text_config, **kwargs)
+        self.block_size = block_size
+        self.canvas_length = block_size
+        self.mask_token_id = mask_token_id
+        self.confidence_threshold = confidence_threshold
+        self.decode_policy = "nemotron_vlm"
+
+
+class NemotronLabsDiffusionVLMTokenizerFast(PreTrainedTokenizerFast):
+    pass
