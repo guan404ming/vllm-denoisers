@@ -100,7 +100,7 @@ VLLM_USE_V2_MODEL_RUNNER=1 vllm serve nvidia/Nemotron-Labs-Sigma-distill-3B-nfe2
 | Distilled NFE 2/4/8/16 | Fresh noise at each transition and the checkpoint's fixed step count |
 | Distilled self-speculative | Diffusion draft and greedy AR verification from the checkpoint |
 
-vLLM schedules requests and streams completed blocks. The adapter calls NVIDIA's PyTorch sampler once per request per block. Each call encodes the committed prefix again. With BF16, self-speculative output can diverge at a block boundary from a single uninterrupted reference call. Use BF16 and the default sampling parameters. Logprobs, custom decode policies, tensor parallelism, and CUDA graphs are unsupported.
+vLLM schedules requests and streams completed blocks. The shared sampler keeps an unfinished block at the same sequence position. Sigma retains each request's latent, self-conditioning, and clean prefix cache between steps. Self-speculative checkpoints alternate diffusion drafting and causal verification. A new block re-encodes the committed prefix. With BF16, self-speculative output can diverge at a block boundary from a single uninterrupted reference call. Use BF16 and the default sampling parameters. Logprobs, custom decode policies, tensor parallelism, and CUDA graphs are unsupported.
 
 ## Decode knobs
 
