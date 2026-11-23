@@ -6,16 +6,20 @@ pytest.importorskip("vllm")
 
 from vllm.config.scheduler import SchedulerConfig
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
+from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
 
 from denoisers.models.verify import verify_block_diffusion
+from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
 from denoisers.scheduler.probe import uses_probe
-from denoisers.scheduler.resident_active import DenoisersScheduler
+from denoisers.scheduler.resident_active import DenoisersAsyncScheduler, DenoisersScheduler
 
 BLOCK = 8
 
 
 def make_config():
-    scheduler = SimpleNamespace(
+    scheduler = SchedulerConfig(
+        max_model_len=BLOCK,
+        is_encoder_decoder=False,
         max_num_batched_tokens=BLOCK,
         max_num_seqs=1,
         enable_chunked_prefill=False,
@@ -46,21 +50,79 @@ class ExternalScheduler(DenoisersScheduler):
     pass
 
 
-class AlignedScheduler(ExternalScheduler):
-    uses_denoiser_scores = False
-
-
 @pytest.mark.parametrize("scheduler_cls", [ExternalScheduler, f"{__name__}.ExternalScheduler"])
 def test_chunked_prefill_uses_inherited_scheduler_capability(scheduler_cls):
     config, hf_config = make_config()
     scheduler = config.scheduler_config
     scheduler.enable_chunked_prefill = True
     scheduler.scheduler_cls = scheduler_cls
-    scheduler.get_scheduler_cls = lambda: SchedulerConfig.get_scheduler_cls(scheduler)
     verify_block_diffusion(config, hf_config, "test")
+    assert scheduler.scheduler_cls == scheduler_cls
     assert uses_probe(scheduler)
     scheduler.scheduler_cls = AlignedScheduler
     assert not uses_probe(scheduler)
     scheduler.scheduler_cls = object
     with pytest.raises(ValueError, match="chunked-prefill"):
         verify_block_diffusion(config, hf_config, "test")
+
+
+@pytest.mark.parametrize(
+    ("async_mode", "expected", "base"),
+    [
+        (True, AlignedAsyncScheduler, DiffusionAsyncScheduler),
+        (False, AlignedScheduler, DiffusionScheduler),
+    ],
+)
+def test_default_aligned_scheduler_uses_final_async_mode(monkeypatch, async_mode, expected, base):
+    config, hf_config = make_config()
+    hf_config.kv_policy = None
+    scheduler = config.scheduler_config
+    scheduler.enable_chunked_prefill = True
+    verify_block_diffusion(config, hf_config, "test")
+    assert scheduler.async_scheduling is None
+    assert not uses_probe(scheduler)
+
+    scheduler.async_scheduling = async_mode
+    monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
+    instance = scheduler.get_scheduler_cls()(vllm_config=config)
+    assert type(instance) is expected
+    assert instance.schedule.__func__ is base.schedule
+    instance.num_spec_tokens = BLOCK
+    instance.num_prefill_lookahead = 0
+    request = SimpleNamespace(num_prompt_tokens=21, num_tokens=21)
+    assert instance._reserve_prefill_lookahead(request, 8, 10) == 8
+    assert instance._reserve_prefill_lookahead(request, 16, 5) == 5
+
+
+@pytest.mark.parametrize(
+    ("policy", "chunked"), [("nemotron_diffusion", True), ("low_confidence", False)]
+)
+def test_other_modes_keep_native_scheduler(policy, chunked):
+    config, hf_config = make_config()
+    hf_config.decode_policy = policy
+    config.scheduler_config.enable_chunked_prefill = chunked
+    verify_block_diffusion(config, hf_config, "test")
+    assert config.scheduler_config.scheduler_cls is None
+
+
+@pytest.mark.parametrize(
+    ("name", "async_mode", "expected"),
+    [
+        ("resact", False, DenoisersScheduler),
+        ("resact", True, DenoisersAsyncScheduler),
+        ("aligned", False, AlignedScheduler),
+        ("aligned", True, AlignedAsyncScheduler),
+    ],
+)
+def test_scheduler_short_names_follow_final_mode(monkeypatch, name, async_mode, expected):
+    config, hf_config = make_config()
+    hf_config.kv_policy = None
+    config.instance_id = "short-name-test"
+    config.parallel_config.data_parallel_rank = 0
+    scheduler = config.scheduler_config
+    scheduler.scheduler_cls = name
+    verify_block_diffusion(config, hf_config, "test")
+    assert uses_probe(scheduler) == (name == "resact")
+    scheduler.async_scheduling = async_mode
+    monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
+    assert type(scheduler.get_scheduler_cls()(vllm_config=config)) is expected
