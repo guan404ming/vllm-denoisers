@@ -23,4 +23,4 @@ curl --fail-with-body http://localhost:8000/v1/completions \
   -d '{"model":"inclusionAI/LLaDA2.0-mini","prompt":"The capital of France is","max_tokens":32}'
 ```
 
-A successful response contains generated text in `choices[0].text`. The exact text can vary. See the [model guide](models.md) to run a different checkpoint.
+A successful response contains generated text in `choices[0].text`. The exact text can vary. See the [recipes](models.md) to run a different checkpoint.

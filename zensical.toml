@@ -9,12 +9,7 @@ nav = [
         { "Overview" = "index.md" },
         { "Getting Started" = ["installation.md", "quickstart.md"] },
     ] },
-    { "User guide" = [
-        { "Overview" = "user-guide.md" },
-        { "Core Concepts" = ["how-it-works.md", "decode-policies.md"] },
-        { "Serving" = ["serving.md", "scheduling.md", "kv-cache.md"] },
-    ] },
-    { "Models" = [
+    { "Recipes" = [
         { "Overview" = "models.md" },
         { "Token-canvas models" = [
             "models/diffusion-gemma.md",
@@ -37,7 +32,12 @@ nav = [
         "components/input.md",
         "components/hold.md",
     ] },
-    { "Contributor guide" = [
+    { "User guide" = [
+        { "Overview" = "user-guide.md" },
+        { "Core Concepts" = ["how-it-works.md", "decode-policies.md"] },
+        { "Serving" = ["serving.md", "scheduling.md", "kv-cache.md"] },
+    ] },
+    { "Developer guide" = [
         { "Overview" = "contributor-guide.md" },
         { "Development" = ["architecture.md", "extending.md"] },
         { "Validation" = ["testing.md", "benchmarking.md"] },
