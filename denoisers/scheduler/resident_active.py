@@ -10,13 +10,13 @@ from vllm.v1.request import RequestStatus
 from denoisers.policies.hold import registry
 from denoisers.scheduler import probe
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
-from denoisers.scheduler.limit import ActiveLimit
 from denoisers.scheduler.remaining import RemainingWork
 
 logger = init_logger("vllm.denoisers")
 
-HOLD = os.environ.get("DENOISERS_HOLD", "fair")
-LOSS = float(os.environ.get("DENOISERS_LOSS", "0.05"))
+HOLD = os.environ.get("DENOISERS_HOLD", "sjf")
+ACTIVE = int(os.environ.get("DENOISERS_ACTIVE", "64"))
+RESERVE = int(ACTIVE * float(os.environ.get("DENOISERS_RESERVE", "0.125")))
 LEARNED = (RequestStatus.FINISHED_STOPPED, RequestStatus.FINISHED_LENGTH_CAPPED)
 
 
@@ -35,9 +35,9 @@ class ResidentActiveScheduler(AlignedScheduler):
     def __init__(self, vllm_config, *args, **kwargs):
         super().__init__(vllm_config, *args, **kwargs)
         self.hold = registry.resolve(HOLD).from_env()
-        seqs = vllm_config.scheduler_config.max_num_seqs
-        self.scores = probe.ScoreTable(probe.table_path(vllm_config), seqs)
-        self.limit = ActiveLimit(seqs, LOSS)
+        self.scores = probe.ScoreTable(
+            probe.table_path(vllm_config), vllm_config.scheduler_config.max_num_seqs
+        )
         self.work = RemainingWork()
         self.steps = Counter()
 
@@ -54,10 +54,12 @@ class ResidentActiveScheduler(AlignedScheduler):
             rid: self.work.estimate(rid, blocks[rid], self.steps[rid], probes.get(rid))
             for rid in decode
         }
-        probing = self.limit.probe(self.current_step, len(decode))
-        active = len(decode) // probing if probing else self.limit.limit
         held = self.hold.held(
-            [(rid, r.arrival_time) for rid, r in decode.items()], time.time(), active, scores
+            [(rid, r.arrival_time) for rid, r in decode.items()],
+            time.time(),
+            ACTIVE,
+            scores,
+            RESERVE,
         )
         for rid in held:
             r = decode[rid]
@@ -65,32 +67,22 @@ class ResidentActiveScheduler(AlignedScheduler):
         if self.current_step % 50 == 0 and decode:
             ranked = [score for score in scores.values() if score > -math.inf]
             logger.info(
-                "denoisers: hold=%s step=%d decode=%d limit=%d held=%d scored=%d score=%.2f/%.2f",
+                "denoisers: hold=%s step=%d decode=%d held=%d scored=%d score=%.2f/%.2f",
                 HOLD,
                 self.current_step,
                 len(decode),
-                self.limit.limit,
                 len(held),
                 len(probes),
                 min(ranked, default=0.0),
                 max(ranked, default=0.0),
             )
         result = super().schedule(throttle_prefills)
-        scheduled = result.num_scheduled_tokens
-        pure = all(
-            rid in decode and width == self.num_spec_tokens for rid, width in scheduled.items()
-        )
-        self.limit.submitted(len(scheduled) * pure, probing)
-        for rid in scheduled:
+        for rid in result.num_scheduled_tokens:
             if rid in decode:
                 self.steps[rid] += 1
                 if scores[rid] == -math.inf:
                     self.work.probing(rid, blocks[rid])
         return result
-
-    def update_from_output(self, scheduler_output, model_runner_output):
-        self.limit.completed(time.monotonic_ns())
-        return super().update_from_output(scheduler_output, model_runner_output)
 
     def _free_request(self, request, delay_free_blocks=False):
         steps = self.steps.pop(request.request_id, 0)

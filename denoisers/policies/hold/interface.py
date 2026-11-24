@@ -22,8 +22,10 @@ class HoldPolicy(ABC):
         now: float,
         active: int,
         scores: dict[str, float],
+        reserve: int = 0,
     ) -> set[str]:
-        return set(self.rank(candidates, now, scores)[active:])
+        held = self.rank(candidates, now, scores)[active - reserve :]
+        return set(held) - set(sorted(held, key=dict(candidates).get)[:reserve])
 
 
 registry = Registry("hold policy", HoldPolicy)
