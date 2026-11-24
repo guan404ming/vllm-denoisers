@@ -56,6 +56,9 @@ class DecodePolicy(ABC):
         cells = torch.arange(entropy.shape[1], device=entropy.device)
         return mean_entropy(entropy, cells >= before.shift.unsqueeze(1))
 
+    def probe_stop(self, after: CanvasRows) -> torch.Tensor:
+        return torch.zeros_like(after.committing)
+
 
 class ScoreMovePolicy(DecodePolicy):
     stop_exit = True

@@ -180,3 +180,11 @@ class EntropyBound(DecodePolicy):
         self, entropy: torch.Tensor, before: CanvasRows, after: CanvasRows
     ) -> torch.Tensor:
         return remaining_steps(entropy, after.step)
+
+    def probe_stop(self, after: CanvasRows) -> torch.Tensor:
+        rows = torch.arange(after.canvas.shape[0], device=after.canvas.device)
+        latest = after.history[rows, (after.history_len - 1) % after.history.shape[1]]
+        cells = torch.arange(latest.shape[1], device=latest.device)
+        valid = (cells >= after.shift.unsqueeze(1)) & (cells < after.width.unsqueeze(1))
+        stop = (latest.unsqueeze(2) == after.stops.unsqueeze(1)).any(2)
+        return (stop & valid).any(1)

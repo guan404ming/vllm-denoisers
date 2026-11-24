@@ -6,7 +6,7 @@ import tempfile
 import numpy as np
 import torch
 
-ROW = np.dtype([("key", np.uint64), ("score", np.float32)])
+ROW = np.dtype([("key", np.uint64), ("score", np.float32), ("stop", np.bool_)])
 
 
 def table_path(vllm_config) -> str:
@@ -31,18 +31,19 @@ class ScoreTable:
             self.rows["score"] = np.nan
             atexit.register(self.close)
 
-    def write(self, slots, req_ids: list[str], scores: list[float]) -> None:
+    def write(self, slots, req_ids: list[str], scores, stops) -> None:
         self.rows["key"][slots] = [key(rid) for rid in req_ids]
         self.rows["score"][slots] = scores
+        self.rows["stop"][slots] = stops
 
-    def read(self, req_ids: list[str]) -> dict[str, float]:
+    def read(self, req_ids: list[str]) -> dict[str, tuple[float, bool]]:
         if self.rows is None:
             if not os.path.exists(self.path):
                 return {}
             self.rows = np.memmap(self.path, ROW, "r", shape=(self.capacity,))
         scored = {
-            int(k): float(s)
-            for k, s in zip(self.rows["key"], self.rows["score"])
+            int(k): (float(s), bool(stop))
+            for k, s, stop in zip(self.rows["key"], self.rows["score"], self.rows["stop"])
             if not np.isnan(s)
         }
         return {rid: scored[key(rid)] for rid in req_ids if key(rid) in scored}
@@ -71,22 +72,30 @@ class Probe:
         self.ready = None
 
     def record(
-        self, slots, req_ids: list[str], scores: torch.Tensor, committing: torch.Tensor
+        self,
+        slots,
+        req_ids: list[str],
+        scores: torch.Tensor,
+        committing: torch.Tensor,
+        stop: torch.Tensor,
     ) -> None:
         index = 0
         if self.pending is not None:
             prev_slots, prev_ids, prev_buf, prev_index = self.pending
             if self.ready is not None:
                 self.ready.synchronize()
-            self.table.write(prev_slots, prev_ids, prev_buf.tolist())
+            prev = prev_buf.numpy()
+            self.table.write(prev_slots, prev_ids, prev[:, 0], prev[:, 1] != 0)
             index = 1 - prev_index
-        values = torch.where(committing, torch.nan, scores.float())
+        values = torch.stack(
+            (torch.where(committing, torch.nan, scores.float()), stop.float()), dim=1
+        )
         buf = self.buffers[index]
-        if buf is None or buf.numel() < values.numel():
+        if buf is None or buf.shape[0] < values.shape[0]:
             buf = self.buffers[index] = torch.empty(
-                values.numel(), dtype=torch.float32, pin_memory=torch.cuda.is_available()
+                values.shape, dtype=torch.float32, pin_memory=torch.cuda.is_available()
             )
-        buf = buf[: values.numel()]
+        buf = buf[: values.shape[0]]
         buf.copy_(values, non_blocking=True)
         if values.is_cuda:
             if self.ready is None:

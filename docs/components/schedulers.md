@@ -6,7 +6,7 @@ For automatic selection, omit `--scheduler-cls`. To enable resident/active sched
 | --- | --- | --- |
 | Automatic | Align prefill chunks when required. Otherwise use vLLM’s default. | Depends on the checkpoint. |
 | `aligned` | Align prefill chunks and keep vLLM’s request order. | `AlignedScheduler` / `AlignedAsyncScheduler` |
-| `resact` | Choose decode group sizes from measured step times. Rank requests with a hold policy. | `DenoisersScheduler` / `DenoisersAsyncScheduler` |
+| `resact` | Apply the active limit. Rank resident requests by remaining steps with a hold policy. | `DenoisersScheduler` / `DenoisersAsyncScheduler` |
 
 Both names follow vLLM’s scheduling mode. Add `--no-async-scheduling` for synchronous execution. For a custom scheduler, pass its full class path.
 
