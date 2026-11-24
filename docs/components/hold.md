@@ -4,6 +4,7 @@ With a resident/active scheduler, set `DENOISERS_HOLD` to choose a `HoldPolicy`.
 
 | Registered name | Class | Direct base | Behavior |
 | --- | --- | --- | --- |
+| `fair` | `FairShare` | `HoldPolicy` | Prefer lower scores and credit fair-share steps waited. |
 | `sjf` | `ShortestFirst` | `HoldPolicy` | Prefer lower probe scores. |
 | `aging` | `Aging` | `HoldPolicy` | Increase priority with time spent waiting. |
 | `random` | `RandomOrder` | `HoldPolicy` | Shuffle candidate requests. |

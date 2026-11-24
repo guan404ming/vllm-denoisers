@@ -19,6 +19,7 @@ This example allows up to 32 sequences and advances at most 16 decoding requests
 
 | Hold policy | How it ranks requests |
 | --- | --- |
+| `fair` | Prefer fewer expected remaining steps. Add the fair-share steps a request waited. This is the default. |
 | `sjf` | Prefer fewer expected remaining steps. |
 | `aging` | Increase priority with waiting time. Set `DENOISERS_AGE_S` to a positive time scale in seconds. |
 | `random` | Shuffle candidates to provide a comparison without probe-based ordering. |

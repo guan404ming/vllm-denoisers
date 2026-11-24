@@ -3,7 +3,7 @@ import math
 import pytest
 import torch
 
-from denoisers.policies.hold import Aging, ShortestFirst
+from denoisers.policies.hold import Aging, FairShare, ShortestFirst
 from denoisers.scheduler import probe
 from denoisers.scheduler.remaining import RemainingWork
 
@@ -53,6 +53,21 @@ def test_aging_lets_old_requests_overtake():
     assert ShortestFirst().held(candidates, 10.0, 1, scores) == {"old"}
     with pytest.raises(ValueError):
         Aging(0.0)
+
+
+def test_fair_share_ranks_by_remaining_steps_plus_the_join_clock():
+    policy = FairShare()
+    scores = {"long": 40.0, "short": 5.0}
+    waiting = [("long", 0.0), ("short", 0.0)]
+    assert policy.held(waiting, 0.0, 1, scores) == {"long"}
+    for _ in range(79):
+        policy.held(waiting, 0.0, 1, scores)
+    assert policy.clock == 40.0
+    scores["new"] = 5.0
+    arrived = [*waiting, ("new", 0.0)]
+    assert policy.rank(arrived, 0.0, scores) == ["short", "long", "new"]
+    assert policy.held(arrived, 0.0, 1, scores) == {"long", "new"}
+    assert policy.held([("new", 0.0)], 0.0, 1, scores) == set() and list(policy.joined) == ["new"]
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU")

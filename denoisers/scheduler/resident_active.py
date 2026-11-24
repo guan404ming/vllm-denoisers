@@ -14,7 +14,7 @@ from denoisers.scheduler.remaining import RemainingWork
 
 logger = init_logger("vllm.denoisers")
 
-HOLD = os.environ.get("DENOISERS_HOLD", "sjf")
+HOLD = os.environ.get("DENOISERS_HOLD", "fair")
 ACTIVE = int(os.environ.get("DENOISERS_ACTIVE", "16"))
 LEARNED = (RequestStatus.FINISHED_STOPPED, RequestStatus.FINISHED_LENGTH_CAPPED)
 
