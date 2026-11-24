@@ -96,6 +96,7 @@ class BlockDiffusionModelState(ModelState):
             kv=self.kv,
             inputs=self.inputs,
             probe=self.probe,
+            prefix_caching=self.vllm_config.cache_config.enable_prefix_caching,
         ), None
 
     def compute_sample_logits(self, hidden_states: torch.Tensor) -> torch.Tensor:

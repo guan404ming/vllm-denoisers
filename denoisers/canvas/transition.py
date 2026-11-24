@@ -44,7 +44,11 @@ def _select(committing: torch.Tensor, reset: torch.Tensor | None, value: torch.T
 
 
 def advance(
-    rows: CanvasRows, logits: torch.Tensor | None, policy, mask_id: int
+    rows: CanvasRows,
+    logits: torch.Tensor | None,
+    policy,
+    mask_id: int,
+    remaining: torch.Tensor | None = None,
 ) -> tuple[CanvasRows, torch.Tensor, torch.Tensor, torch.Tensor | None]:
     block = rows.canvas.shape[1]
     if logits is None:
@@ -54,10 +58,16 @@ def advance(
         if rows.stops is not None and policy.stop_exit:
             step.done = step.done | final_prefix(after.canvas, rows.shift, rows.stops, mask_id)
     now = torch.zeros_like(rows.committing) if step.emit is None else step.emit
-    committing = rows.committing | now
-
     offsets = torch.arange(block, device=rows.canvas.device)
     keep = (rows.width - rows.shift).clamp(min=0)
+    if remaining is not None:
+        required = (offsets >= rows.shift[:, None]) & (offsets < (rows.shift + remaining)[:, None])
+        ready = ~((after.canvas == mask_id) & required).any(1)
+        batch_ready = ((remaining > 0) & (remaining <= keep) & ready).all()
+        terminal = batch_ready & ~rows.committing
+        now = now | terminal
+        keep = torch.where(terminal, remaining, keep)
+    committing = rows.committing | now
     source = torch.where(now.unsqueeze(1), after.canvas, rows.canvas)
     packed = source.gather(1, (offsets + rows.shift.unsqueeze(1)).clamp(max=block - 1))
     emit = committing.unsqueeze(1) & (offsets < keep.unsqueeze(1))

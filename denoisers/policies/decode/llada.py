@@ -8,6 +8,7 @@ from denoisers.policies.decode.interface import ScoreMovePolicy, registry
 
 @registry.register("llada")
 class LLaDA(ScoreMovePolicy):
+    fixed_revealed_tokens = True
     causal_prefill = False
 
     def __init__(

@@ -7,6 +7,7 @@ from denoisers.policies.decode.interface import ScoreMovePolicy, registry
 
 @registry.register("fast_dllm")
 class FastDLLM(ScoreMovePolicy):
+    fixed_revealed_tokens = True
     shifted = True
 
     def __init__(

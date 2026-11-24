@@ -20,4 +20,6 @@ While the block is in progress, the sampler reports zero output tokens to vLLM. 
 
 [![The sampler reports zero output tokens during denoising and two tokens, A and B, at commit.](assets/block-output.svg){ width="100%" }](assets/block-output.svg)
 
+Fast-dLLM, LLaDA, and Dream keep each revealed token fixed. When every request in a decode batch has its remaining `max_tokens` allowance filled, the sampler returns those prefixes together. Finishing the batch this way skips refinement of unused positions. Requests with output logprobs or prefix caching use the regular commit.
+
 [Decode policies](decode-policies.md) · [Runtime architecture](architecture.md)
