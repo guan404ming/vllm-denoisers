@@ -11,7 +11,11 @@ from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, Diff
 from denoisers.models.verify import verify_block_diffusion
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
 from denoisers.scheduler.probe import uses_probe
-from denoisers.scheduler.resident_active import DenoisersAsyncScheduler, DenoisersScheduler
+from denoisers.scheduler.resident_active import (
+    DenoisersAsyncScheduler,
+    DenoisersScheduler,
+    ResidentActiveScheduler,
+)
 
 BLOCK = 8
 
@@ -126,3 +130,57 @@ def test_scheduler_short_names_follow_final_mode(monkeypatch, name, async_mode, 
     scheduler.async_scheduling = async_mode
     monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
     assert type(scheduler.get_scheduler_cls()(vllm_config=config)) is expected
+
+
+@pytest.mark.parametrize("async_mode", [False, True])
+def test_resact_splits_a_round_and_interrupts_for_admission(monkeypatch, async_mode):
+    config, _ = make_config()
+    config.instance_id = "adaptive-resact"
+    config.parallel_config.data_parallel_rank = 0
+    config.scheduler_config.async_scheduling = async_mode
+    monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, config: None)
+    scheduler = ResidentActiveScheduler(config)
+    scheduler.waiting = []
+    scheduler.kv_holding_waiting = []
+    scheduler.current_step = 0
+    scheduler.num_spec_tokens = BLOCK
+    scheduler.running = [
+        SimpleNamespace(
+            request_id=rid,
+            arrival_time=0,
+            num_output_tokens=0,
+            num_computed_tokens=1,
+            num_prompt_tokens=1,
+            next_decode_eligible_step=0,
+            sampling_params=None,
+        )
+        for rid in ("a", "b", "c")
+    ]
+    scheduler.timings.cost.update({1: 2, 2: 3, 3: 6})
+    monkeypatch.setattr(scheduler.scores, "read", lambda ids: {"a": 2, "b": 1, "c": 0})
+
+    def dispatch(self, throttle_prefills):
+        self.current_step += 1
+        batch = {
+            r.request_id: BLOCK
+            for r in self.running
+            if r.next_decode_eligible_step <= self.current_step
+        }
+        return SimpleNamespace(num_scheduled_tokens=batch)
+
+    monkeypatch.setattr(AlignedScheduler, "schedule", dispatch)
+
+    def step():
+        return set(scheduler.schedule().num_scheduled_tokens)
+
+    assert step() == {"a", "b", "c"}
+    assert step() == {"b", "c"}
+    assert step() == {"a"}
+    assert step() == {"b", "c"}
+    scheduler.waiting.append("new")
+    assert step() == {"a", "b", "c"}
+    scheduler.waiting.clear()
+    assert step() == {"a", "b", "c"}
+    assert step() == {"b", "c"}
+    scheduler.running.pop(0)
+    assert step() == {"b", "c"}

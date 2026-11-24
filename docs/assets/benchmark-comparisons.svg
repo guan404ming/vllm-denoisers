@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160" role="img" aria-labelledby="title desc">
   <title id="title">Two controlled comparisons</title>
-  <desc id="desc">Compare native with plugin to measure the runtime change. Compare probe with sjf to measure the active limit with the same scheduler and probe.</desc>
+  <desc id="desc">Compare native and plugin for the runtime, then plugin and ResAct for scheduling.</desc>
   <style>
     :root { color-scheme: light dark; color: CanvasText; }
     text { fill: currentColor; font-family: Inter, system-ui, sans-serif; }
@@ -20,11 +20,11 @@
   <rect class="line" x="316" y="57" width="119" height="32" rx="5"/>
   <text class="detail" x="375.5" y="78" text-anchor="middle">plugin</text>
   <text class="detail" x="449" y="79">Enable the plugin</text>
-  <text class="detail" x="24" y="127">Active limit</text>
+  <text class="detail" x="24" y="127">Scheduling</text>
   <rect class="line" x="160" y="105" width="119" height="32" rx="5"/>
-  <text class="detail" x="219.5" y="126" text-anchor="middle">probe</text>
+  <text class="detail" x="219.5" y="126" text-anchor="middle">plugin</text>
   <path class="line" d="M285 121h24m-5-5 5 5-5 5"/>
   <rect class="line" x="316" y="105" width="119" height="32" rx="5"/>
-  <text class="detail" x="375.5" y="126" text-anchor="middle">sjf</text>
-  <text class="detail" x="449" y="127">32 to 16 active</text>
+  <text class="detail" x="375.5" y="126" text-anchor="middle">resact</text>
+  <text class="detail" x="449" y="127">Enable ResAct</text>
 </svg>
