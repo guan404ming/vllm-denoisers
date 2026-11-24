@@ -39,7 +39,7 @@ Implement `soft(logits, have, before, after)` to calculate a soft input and `con
 
 ## Hold policy
 
-Implement `rank(candidates, now, scores)`. Return request IDs in priority order. Each candidate contains a request ID and an arrival time. The scheduler defers requests beyond the active limit. See [Scheduling](scheduling.md) for a working server configuration.
+Implement `rank(candidates, now, scores)`. Return request IDs in priority order. Each candidate contains a request ID and an arrival time. ResAct uses this order when it splits a decode batch. See [Scheduling](scheduling.md) for a working server configuration.
 
 ## Register a model family
 

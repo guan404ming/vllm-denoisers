@@ -123,7 +123,7 @@ def vllm_generate(
     prompts: list[str],
     gen_length: int,
     hf_overrides: dict,
-    active: int,
+    resact: bool,
     tp: int,
     engine: dict | None = None,
     sampling: dict | None = None,
@@ -140,8 +140,7 @@ def vllm_generate(
         "max_num_batched_tokens": 2048,
         "max_num_seqs": 8,
     }
-    if active:
-        os.environ["DENOISERS_ACTIVE"] = str(active)
+    if resact:
         args["scheduler_cls"] = "resact"
         args["async_scheduling"] = True
     args.update(engine or {})
@@ -175,7 +174,7 @@ def run_both(
     gen_length: int,
     cache_dir: str,
     n_ref: int | None = None,
-    active: int = 0,
+    resact: bool = False,
     canvas: int = 0,
     tp: int = 1,
 ) -> tuple[list[dict], list[dict]]:
@@ -186,13 +185,13 @@ def run_both(
         hf_overrides["canvas_length"] = canvas
     sides = {
         "hf": (hf_generate, (model_id, prompts[:n_ref], gen_length)),
-        "vllm": (vllm_generate, (model_id, prompts, gen_length, hf_overrides, active, tp)),
+        "vllm": (vllm_generate, (model_id, prompts, gen_length, hf_overrides, resact, tp)),
     }
     stem = f"{tag}_{model_id.split('/')[-1]}_{policy or 'default'}"
     if canvas:
         stem += f"_c{canvas}"
-    if active:
-        stem += f"_active{active}"
+    if resact:
+        stem += "_resact"
     pending = {}
     results = {}
     for name, (fn, args) in sides.items():
@@ -246,12 +245,12 @@ def parity(
     model: str = DEFAULT_MODEL,
     policy: str = "",
     n_ref: int | None = None,
-    active: int = 0,
+    resact: bool = False,
     canvas: int = 0,
     tp: int = 1,
     cache_dir: str = "/tmp/denoisers-eval",
 ):
-    ref, got = run_both("parity", model, policy, PROMPTS, 64, cache_dir, n_ref, active, canvas, tp)
+    ref, got = run_both("parity", model, policy, PROMPTS, 64, cache_dir, n_ref, resact, canvas, tp)
     exact = show(ref, got)
     print(f"exact {exact}/{len(ref)}")
 
@@ -309,7 +308,7 @@ def features(
         "partial": (PROMPTS, 17, hf_overrides, {**graphs, "max_model_len": 90}, {}),
     }
     calls = {
-        name: vllm_generate.spawn(model, prompts, length, overrides, 0, 1, engine, params)
+        name: vllm_generate.spawn(model, prompts, length, overrides, False, 1, engine, params)
         for name, (prompts, length, overrides, engine, params) in runs.items()
         if not only or name in only.split(",")
     }
