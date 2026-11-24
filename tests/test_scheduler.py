@@ -5,6 +5,7 @@ import torch
 
 from denoisers.policies.hold import Aging, FairShare, ShortestFirst
 from denoisers.scheduler import probe
+from denoisers.scheduler.limit import ActiveLimit
 from denoisers.scheduler.remaining import RemainingWork
 
 
@@ -68,6 +69,41 @@ def test_fair_share_ranks_by_remaining_steps_plus_the_join_clock():
     assert policy.rank(arrived, 0.0, scores) == ["short", "long", "new"]
     assert policy.held(arrived, 0.0, 1, scores) == {"long", "new"}
     assert policy.held([("new", 0.0)], 0.0, 1, scores) == set() and list(policy.joined) == ["new"]
+
+
+def run_steps(limit, steps, cost):
+    for size, probe_kind in steps:
+        limit.submitted(size, probe_kind)
+        limit.completed(limit.last_end + cost(size))
+
+
+def test_active_limit_calibrates_once_from_full_and_half_steps():
+    limit = ActiveLimit(64, 0.05)
+    assert limit.limit == 32
+    assert [limit.probe(step, 64) for step in (0, 7, 8, 16)] == [1, 1, 2, 1]
+    assert limit.probe(0, 32) == 0
+    blocks = [(64, 1)] * 9 + [(32, 2)] * 9
+    run_steps(limit, blocks, lambda size: 20 + 5 * size)
+    assert limit.limit == 32 and limit.probe(0, 64) == 1
+    run_steps(limit, blocks, lambda size: 20 + 5 * size)
+    assert limit.limit == 34 and limit.probe(0, 64) == 0
+    assert 34 / (20 + 5 * 34) >= 0.95 * 64 / (20 + 5 * 64) > 33 / (20 + 5 * 33)
+    run_steps(limit, blocks * 2, lambda size: 1 + 5 * size)
+    assert limit.limit == 34
+
+
+def test_active_limit_times_the_latest_batch_and_ignores_stalls():
+    limit = ActiveLimit(64, 0.05)
+    run_steps(limit, [(32, 0), (32, 0), (64, 1), (0, 1), (64, 1)], lambda size: 300)
+    assert limit.costs == {1: [], 2: []}
+    run_steps(limit, [(64, 1)], lambda size: 320)
+    assert limit.costs[1] == [(1 / 64, 5.0)]
+    cost = iter([10**9] + [20 + 5 * 64] * 20 + [20 + 5 * 32] * 17)
+    run_steps(limit, [(64, 1)] * 21 + [(32, 2)] * 17, lambda size: next(cost))
+    assert limit.limit == 34
+    floor = ActiveLimit(64, 0.05)
+    run_steps(floor, [(64, 1)] * 17 + [(32, 2)] * 17, lambda size: 1 + 5 * size)
+    assert floor.limit == 16
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU")
