@@ -50,7 +50,7 @@ class DiffusionGemmaForBlockDiffusionConfig(VerifyAndUpdateConfig):
         if "max_new_tokens" not in model_config.override_generation_config:
             model_config.override_generation_config["max_new_tokens"] = None
         scheduler = vllm_config.scheduler_config
-        if scheduler.max_num_seqs >= SchedulerConfig.DEFAULT_MAX_NUM_SEQS:
+        if scheduler.max_num_seqs == SchedulerConfig.DEFAULT_MAX_NUM_SEQS:
             scheduler.max_num_seqs = 8
         verify_block_diffusion(vllm_config, hf_config, "DiffusionGemma")
 

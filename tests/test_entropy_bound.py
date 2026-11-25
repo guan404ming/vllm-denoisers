@@ -264,3 +264,15 @@ def test_kernel_samples_follow_the_distribution():
     share = (draws == 4100).float().mean().item()
     assert 0.65 < share < 0.85
     assert ((draws == 7) | (draws == 4100)).all()
+
+
+def test_probe_stop_reads_the_latest_prediction_inside_the_canvas():
+    policy = make_policy()
+    rows = rows_for(policy, n=3)
+    rows.stops = torch.tensor([[3, -1]] * 3)
+    rows.width = torch.tensor([BLOCK, BLOCK, 4])
+    rows.history_len = torch.tensor([2, 1, 2])
+    rows.history[0, 1, 5] = 3
+    rows.history[1, 1, 5] = 3
+    rows.history[2, 1, 5] = 3
+    assert policy.probe_stop(rows).tolist() == [True, False, False]

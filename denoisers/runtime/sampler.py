@@ -291,7 +291,9 @@ class BlockDiffusionSampler(CanvasSampler):
             if self.probe is not None:
                 ids = [input_batch.req_ids[i] for i in group_np]
                 group_slots = input_batch.idx_mapping_np[group_np]
-                self.probe.record(group_slots, ids, before.step, before.committing)
+                self.probe.record(
+                    group_slots, ids, before.step, before.committing, policy.probe_stop(after)
+                )
             self.req_states.draft_tokens[slots, : state.block_length] = after.canvas
             if self.kv is not None:
                 self.kv.restore(slots)
@@ -335,7 +337,11 @@ class BlockDiffusionSampler(CanvasSampler):
                 entropy = row_stats(logits, state.mask_id).entropy
             scores = policy.probe_score(entropy, before, after)
             self.probe.record(
-                slots_np, [input_batch.req_ids[i] for i in rows_np], scores, before.committing
+                slots_np,
+                [input_batch.req_ids[i] for i in rows_np],
+                scores,
+                before.committing,
+                policy.probe_stop(after),
             )
         if self.kv is not None:
             full = logprob_args is not None or self.decoders.default.dense_scores

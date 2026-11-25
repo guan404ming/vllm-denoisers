@@ -34,7 +34,7 @@
   </g>
 
   <text class="heading" x="76" y="46">Request scheduler</text>
-  <text class="detail" x="76" y="69">Select requests · Adaptive group size</text>
+  <text class="detail" x="76" y="69">Select requests · Active limit</text>
 
   <text class="heading" x="468" y="46">Model adapters</text>
   <text class="detail" x="468" y="69">Token canvases · Continuous latents</text>
