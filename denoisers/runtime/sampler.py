@@ -13,9 +13,9 @@ from vllm.v1.worker.gpu.sample.penalties import use_penalty
 
 from denoisers.canvas.state import CanvasState
 from denoisers.canvas.transition import advance
+from denoisers.hooks import draft_tokens
 from denoisers.ops.sampling import exclude_filtered_mask
 from denoisers.ops.stats import row_stats
-from denoisers.patches import draft_tokens
 from denoisers.policies.inputs import InputPolicy
 from denoisers.runtime.batch import finished_prefills, query_lens
 from denoisers.runtime.decoders import Decoders
