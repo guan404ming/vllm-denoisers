@@ -9,7 +9,7 @@ Pass these flags to `vllm serve`.
 | Flag | Use |
 | --- | --- |
 | `--scheduler-cls` | `aligned`, `resact`, or a class path. Omit it for automatic selection. See [Request scheduling](../features/request-scheduling.md). |
-| `--attention-backend` | `TRITON_ATTN` (default) or `FLASH_ATTN`. See [Installation](../installation.md#choose-an-attention-backend). |
+| `--attention-backend` | `TRITON_ATTN` or `FLASH_ATTN`. Omit it for automatic selection. See [Installation](../installation.md#choose-an-attention-backend). |
 | `--max-num-batched-tokens` | Batch token budget for one step. See [Batch limits](batch-limits.md). |
 | `--max-num-seqs` | Upper limit of concurrent sequences. The plugin lowers it to fit the batch token budget. With `resact`, it sets how many requests stay resident. |
 | `--max-model-len` | Longest prompt plus response. |

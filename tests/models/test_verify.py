@@ -9,6 +9,7 @@ from vllm.v1.attention.backend import AttentionType
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
 
+from denoisers.models.common import verify
 from denoisers.models.common.verify import verify_block_diffusion
 from denoisers.runtime.model_state import ranged
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
@@ -36,7 +37,8 @@ def make_config():
         parallel_config=SimpleNamespace(
             pipeline_parallel_size=1, enable_batch_sharded_sampling=False
         ),
-        cache_config=SimpleNamespace(enable_prefix_caching=False),
+        cache_config=SimpleNamespace(enable_prefix_caching=False, sliding_window=None),
+        model_config=SimpleNamespace(get_head_size=lambda: 64),
         attention_config=SimpleNamespace(backend=AttentionBackendEnum.FLASH_ATTN),
     )
     hf_config = SimpleNamespace(
@@ -65,9 +67,33 @@ def test_sequences_fit_the_batch_token_budget():
         verify_block_diffusion(config, hf_config, "test")
 
 
-def test_attention_backend_defaults_to_triton():
+@pytest.mark.parametrize(
+    ("policy", "version", "window", "expected"),
+    [
+        ("low_confidence", 4, None, AttentionBackendEnum.FLASH_ATTN),
+        ("low_confidence", 3, None, AttentionBackendEnum.TRITON_ATTN),
+        ("low_confidence", None, None, AttentionBackendEnum.TRITON_ATTN),
+        ("low_confidence", 4, 1024, AttentionBackendEnum.TRITON_ATTN),
+        ("dream", 4, None, AttentionBackendEnum.FLASH_ATTN),
+        ("dream", 4, 1024, AttentionBackendEnum.TRITON_ATTN),
+        ("entropy_bound", 4, None, AttentionBackendEnum.TRITON_ATTN),
+    ],
+)
+def test_attention_backend_defaults_to_flash_when_it_fits(
+    monkeypatch, policy, version, window, expected
+):
     config, hf_config = make_config()
+    hf_config.decode_policy = policy
     config.attention_config.backend = None
+    config.cache_config.sliding_window = window
+    monkeypatch.setattr(verify, "get_flash_attn_version", lambda **_: version)
+    verify_block_diffusion(config, hf_config, "test")
+    assert config.attention_config.backend is expected
+
+
+def test_attention_backend_keeps_a_supported_choice():
+    config, hf_config = make_config()
+    config.attention_config.backend = AttentionBackendEnum.TRITON_ATTN
     verify_block_diffusion(config, hf_config, "test")
     assert config.attention_config.backend is AttentionBackendEnum.TRITON_ATTN
     config.attention_config.backend = AttentionBackendEnum.FLASHINFER
