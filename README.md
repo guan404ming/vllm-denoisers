@@ -25,7 +25,10 @@ vllm-denoisers is a vLLM plugin for serving diffusion language models.
 Each request refines a block of tokens over several steps, then emits the completed tokens through vLLM’s OpenAI-compatible API.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/guan404ming/vllm-denoisers/main/docs/assets/architecture.svg" width="75%" alt="vLLM schedules each denoising step. Both model families share a sampler that holds unfinished blocks and emits tokens from completed blocks.">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/guan404ming/vllm-denoisers/main/docs/assets/architecture.svg">
+    <img src="https://raw.githubusercontent.com/guan404ming/vllm-denoisers/main/docs/assets/architecture-light.svg" width="75%" alt="vLLM schedules each denoising step. Both model families share a sampler that holds unfinished blocks and emits tokens from completed blocks.">
+  </picture>
 </p>
 
 vllm-denoisers is efficient with:
