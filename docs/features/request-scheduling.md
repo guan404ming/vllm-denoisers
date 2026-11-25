@@ -32,7 +32,11 @@ This example keeps up to 32 requests resident and advances 16 on each step. `DEN
 
 ## Hold policies
 
-With the resident/active scheduler, set `DENOISERS_HOLD` to choose a hold policy. For example, `DENOISERS_HOLD=aging DENOISERS_AGE_S=2` increases priority with wait time.
+With the resident/active scheduler, set `DENOISERS_HOLD` to choose a hold policy. For example, the `aging` policy increases priority with wait time:
+
+```bash
+DENOISERS_HOLD=aging DENOISERS_AGE_S=2 vllm serve <model> --scheduler-cls resact
+```
 
 | Hold policy | How it ranks requests |
 | --- | --- |

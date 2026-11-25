@@ -1,6 +1,10 @@
 # Output-head quantization
 
-Set `lm_head_quantization` in `--hf-overrides` for an unquantized output head. For example, `--hf-overrides '{"lm_head_quantization":"fp8"}'`. Shared input embeddings retain their original weights.
+Set `lm_head_quantization` in `--hf-overrides` for an unquantized output head. Shared input embeddings retain their original weights.
+
+```bash
+vllm serve <model> --hf-overrides '{"lm_head_quantization":"fp8"}'
+```
 
 | Format | Requirements |
 | --- | --- |

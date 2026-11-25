@@ -4,7 +4,11 @@ By default, each denoising step reads only the tokens on the canvas. A feedback 
 
 ## Enable a feedback policy
 
-Set `feedback_policy` in `--hf-overrides`. For a model that supports weighted input embeddings, use `--hf-overrides '{"feedback_policy":"smooth"}'`.
+Set `feedback_policy` in `--hf-overrides`. For a model that supports weighted input embeddings:
+
+```bash
+vllm serve <model> --hf-overrides '{"feedback_policy":"smooth"}'
+```
 
 | Policy | Behavior |
 | --- | --- |

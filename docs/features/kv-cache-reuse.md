@@ -4,7 +4,11 @@ Between full passes, the runtime recomputes selected positions and reuses cached
 
 ## Enable a KV policy
 
-Set `kv_policy` in `--hf-overrides` and pass `--no-async-scheduling`. For example, `--hf-overrides '{"kv_policy":"masked"}' --no-async-scheduling`.
+Set `kv_policy` in `--hf-overrides` and pass `--no-async-scheduling`.
+
+```bash
+vllm serve <model> --hf-overrides '{"kv_policy":"masked"}' --no-async-scheduling
+```
 
 | Policy | Positions to recompute |
 | --- | --- |

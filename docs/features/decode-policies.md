@@ -4,7 +4,11 @@ At each denoising step, the model scores candidate tokens. The decode policy use
 
 ## Choose a policy
 
-Each token-canvas model family sets a default policy. To change it for a compatible checkpoint, set `decode_policy` in `--hf-overrides`. For example, LLaDA2.1 supports `--hf-overrides '{"decode_policy":"joint"}'`.
+Each token-canvas model family sets a default policy. To change it for a compatible checkpoint, set `decode_policy` in `--hf-overrides`. For example, LLaDA2.1 supports joint editing:
+
+```bash
+vllm serve <model> --hf-overrides '{"decode_policy":"joint"}'
+```
 
 | Policy | Behavior |
 | --- | --- |
