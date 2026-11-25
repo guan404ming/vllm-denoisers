@@ -1,6 +1,8 @@
 import math
 from collections import Counter
 
+WIDTH = 1.0
+
 
 class RemainingWork:
     def __init__(self):
@@ -14,7 +16,7 @@ class RemainingWork:
     def estimate(self, rid, block, steps, probe):
         marks = self.blocks.setdefault(rid, [])
         while len(marks) <= block:
-            marks.append([steps, False])
+            marks.append([steps, False, None])
         if probe is None:
             if self.probed.get(rid) != block:
                 return -math.inf
@@ -22,9 +24,13 @@ class RemainingWork:
         else:
             score, stop = probe
             marks[block][1] |= stop
+            if marks[block][2] is None:
+                marks[block][2] = int(score / WIDTH)
             self.scored += 1
             self.score += (score - self.score) / self.scored
-        return score + self.future.get((block, marks[block][1]), 0.0)
+        _, stop, bucket = marks[block]
+        coarse = self.future.get((block, stop, None), 0.0)
+        return score + self.future.get((block, stop, bucket), coarse)
 
     def probing(self, rid, block):
         self.probed[rid] = block
@@ -34,9 +40,9 @@ class RemainingWork:
         self.probed.pop(rid, None)
         if not learn:
             return
-        ends = [start for start, _ in marks[1:]] + [steps]
-        for block, ((_, stop), end) in enumerate(zip(marks, ends)):
-            cell = (block, stop)
-            self.counts[cell] += 1
-            mean = self.future.get(cell, 0.0)
-            self.future[cell] = mean + (steps - end - mean) / self.counts[cell]
+        ends = [mark[0] for mark in marks[1:]] + [steps]
+        for block, ((_, stop, bucket), end) in enumerate(zip(marks, ends)):
+            for cell in {(block, stop, bucket), (block, stop, None)}:
+                self.counts[cell] += 1
+                mean = self.future.get(cell, 0.0)
+                self.future[cell] = mean + (steps - end - mean) / self.counts[cell]

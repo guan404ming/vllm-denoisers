@@ -91,10 +91,23 @@ def test_finished_requests_teach_the_steps_left_after_each_block():
     work.estimate("long", 1, 10, (5.0, False))
     work.estimate("long", 2, 22, (5.0, True))
     work.finished("long", 30, True)
-    assert work.future == {(0, False): 20.0, (1, False): 8.0, (2, True): 0.0}
+    assert work.future[0, False, None] == 20.0 and work.future[1, False, None] == 8.0
+    assert work.future[2, True, None] == 0.0
     assert work.estimate("early", 0, 0, (9.0, False)) == 29.0
     assert work.estimate("late", 1, 12, (9.0, False)) == 17.0
     assert work.estimate("ending", 2, 20, (9.0, True)) == 9.0
     work.estimate("aborted", 0, 0, (5.0, False))
     work.finished("aborted", 3, False)
-    assert work.future[0, False] == 20.0 and "aborted" not in work.blocks
+    assert work.future[0, False, None] == 20.0 and "aborted" not in work.blocks
+
+
+def test_the_first_score_of_a_block_selects_its_learned_future():
+    work = RemainingWork()
+    for rid, score, steps in (("short", 1.5, 4), ("long", 3.5, 40)):
+        work.estimate(rid, 0, 0, (score, False))
+        work.estimate(rid, 1, 2, (score, False))
+        work.finished(rid, steps, True)
+    assert work.estimate("a", 0, 0, (1.2, False)) == 1.2 + 2.0
+    assert work.estimate("b", 0, 0, (3.9, False)) == 3.9 + 38.0
+    assert work.estimate("b", 0, 1, (1.2, False)) == 1.2 + 38.0
+    assert work.estimate("unseen", 0, 0, (7.0, False)) == 7.0 + 20.0
