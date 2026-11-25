@@ -21,9 +21,6 @@ dev = ["pillow", "pytest", "ruff"]
 [tool.setuptools.packages.find]
 include = ["denoisers*"]
 
-[tool.setuptools.package-data]
-"denoisers.patches" = ["*.patch"]
-
 [tool.ruff]
 line-length = 100
 

@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 
+FREE = (0, 1 << 30)
+
 
 def finished_prefills(input_batch) -> np.ndarray:
     computed = input_batch.num_computed_prefill_tokens_np
@@ -27,6 +29,10 @@ def prefill_block_ranges(seq_len: int, block_length: int) -> list[tuple[int, int
         for start in range(0, seq_len, block_length)
         if min(start + block_length, seq_len) - 1 > start
     ]
+
+
+def free_ranges(ranges: dict, prefilling: np.ndarray) -> dict:
+    return ranges | {int(row): [FREE] for row in np.flatnonzero(~prefilling)}
 
 
 def aligned_prefill_chunk(start: int, num_new: int, prompt_len: int, block: int) -> int:

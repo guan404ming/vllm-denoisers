@@ -34,4 +34,4 @@ The optional [LLaDA2 evaluation script](https://github.com/guan404ming/vllm-deno
 
 ## Check a vLLM upgrade
 
-Verify model registration, attention metadata, the custom sampler, and the draft token hook against the new worker interfaces. Run a GPU smoke request for each affected family. For DiffusionGemma, also run `uv run pytest -q tests/test_entropy_bound.py` with CUDA available. See the [runtime architecture](architecture.md) for the integration points.
+Verify model registration, attention metadata, the FlashAttention backend, the custom sampler, and the draft token hook against the new worker interfaces. Run a GPU smoke request for each affected family. For DiffusionGemma, also run `uv run pytest -q tests/test_entropy_bound.py` with CUDA available. See the [runtime architecture](architecture.md) for the integration points.

@@ -27,6 +27,6 @@ The expected output is `denoisers.plugin:register`. vLLM loads installed general
 
 ## Choose an attention backend
 
-Use `TRITON_ATTN` for the shared canvas runtime on stock vLLM. The FlashAttention path on Hopper and newer needs the [block-ranges patch](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/patches/vllm-0.33.0rc1.dev487-flash-block-ranges.patch) in the matching vLLM source tree. Per-request causal attention on this path needs FlashAttention 4.
+Use `TRITON_ATTN` or `FLASH_ATTN` for the shared canvas runtime on stock vLLM. `FLASH_ATTN` needs FlashAttention 4. Block-aligned prefill on `FLASH_ATTN` also needs a model without sliding-window attention.
 
 Continue with the [quick start](quickstart.md).
