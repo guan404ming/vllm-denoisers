@@ -34,7 +34,7 @@ nav = [
     { "User guide" = [
         { "Overview" = "user-guide.md" },
         { "Core Concepts" = ["how-it-works.md", "decode-policies.md"] },
-        { "Serving" = ["serving.md", "scheduling.md", "kv-cache.md"] },
+        { "Serving" = ["serving.md", "scheduling.md", "kv-cache.md", "settings.md"] },
     ] },
     { "Developer guide" = [
         { "Overview" = "contributor-guide.md" },
