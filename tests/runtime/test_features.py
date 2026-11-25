@@ -6,7 +6,6 @@ from denoisers.canvas.transition import advance
 from denoisers.ops.sampling import sample
 from denoisers.policies.decode.indel import Indel
 from denoisers.policies.decode.low_confidence import LowConfidence
-from denoisers.runtime.batch import aligned_prefill_chunk
 
 MASK = 9
 BLOCK = 8
@@ -45,15 +44,6 @@ def test_truncated_canvas_emits_only_valid_positions():
     assert num_sampled.tolist() == [3, 7]
     assert sampled[0, :3].tolist() == [7, 7, 7]
     assert rows.width.tolist() == [BLOCK, BLOCK]
-
-
-def test_aligned_prefill_chunk():
-    assert aligned_prefill_chunk(0, 48, 100, 32) == 32
-    assert aligned_prefill_chunk(32, 48, 100, 32) == 32
-    assert aligned_prefill_chunk(64, 48, 100, 32) == 48
-    assert aligned_prefill_chunk(0, 20, 100, 32) == 0
-    assert aligned_prefill_chunk(96, 4, 100, 32) == 4
-    assert aligned_prefill_chunk(100, 32, 100, 32) == 32
 
 
 def test_truncated_block_blocks_indel_edit_ops():

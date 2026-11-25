@@ -3,10 +3,11 @@ import math
 import pytest
 import torch
 
-from denoisers import probe
 from denoisers.ops.stats import (
     _nucleus_reference,
     _reference,
+    entropy,
+    mean_entropy,
     nucleus_bag,
     row_stats,
     sample_stats,
@@ -36,7 +37,7 @@ def test_reference_matches_torch_formulas():
     candidates[..., MASK] = 0
     assert torch.equal(stats.x0, candidates.argmax(dim=-1))
     assert torch.allclose(stats.p0, probs.gather(-1, stats.x0.unsqueeze(-1)).squeeze(-1))
-    assert torch.allclose(stats.entropy, probe.entropy(logits), atol=1e-5)
+    assert torch.allclose(stats.entropy, entropy(logits), atol=1e-5)
     assert stats.x0[0, 1] == DELETE and stats.alt[0, 1] not in (MASK, DELETE, SPLIT)
     assert stats.x0[1, 0] == 2
     assert stats.x0[2, 2] == 4 and stats.p0[2, 2] == 1.0 and stats.entropy[2, 2] == 0.0
@@ -120,3 +121,12 @@ def test_nucleus_kernel_matches_reference():
     assert torch.allclose(got, ref, atol=1e-5)
     assert (got > 0).sum(-1).max() > 1
     assert got[0].nonzero().flatten().tolist() == [5] and (got[:, MASK] == 0).all()
+
+
+def test_mean_entropy_counts_only_selected_positions():
+    logits = torch.zeros(1, 4, 16)
+    logits[0, 2, 0] = 50.0
+    counted = torch.tensor([[True, True, False, True]])
+    values = entropy(logits)
+    assert math.isclose(mean_entropy(values, counted).item(), math.log(16), rel_tol=1e-5)
+    assert mean_entropy(values, torch.ones(1, 4, dtype=torch.bool)).item() < math.log(16)

@@ -6,7 +6,7 @@ import torch
 
 from denoisers.canvas.rows import CanvasRows, StepResult
 from denoisers.ops.sampling import draws, shift_rows
-from denoisers.probe import mean_entropy
+from denoisers.ops.stats import mean_entropy
 from denoisers.registry import Registry
 
 

@@ -4,17 +4,18 @@ import pytest
 import torch
 
 from denoisers import probe
+from denoisers.scheduler import aligned_prefill_chunk
 from denoisers.scheduler.hold import Aging, ShortestFirst
 from denoisers.scheduler.remaining import RemainingWork
 
 
-def test_mean_entropy_counts_only_selected_positions():
-    logits = torch.zeros(1, 4, 16)
-    logits[0, 2, 0] = 50.0
-    counted = torch.tensor([[True, True, False, True]])
-    entropy = probe.entropy(logits)
-    assert math.isclose(probe.mean_entropy(entropy, counted).item(), math.log(16), rel_tol=1e-5)
-    assert probe.mean_entropy(entropy, torch.ones(1, 4, dtype=torch.bool)).item() < math.log(16)
+def test_aligned_prefill_chunk():
+    assert aligned_prefill_chunk(0, 48, 100, 32) == 32
+    assert aligned_prefill_chunk(32, 48, 100, 32) == 32
+    assert aligned_prefill_chunk(64, 48, 100, 32) == 48
+    assert aligned_prefill_chunk(0, 20, 100, 32) == 0
+    assert aligned_prefill_chunk(96, 4, 100, 32) == 4
+    assert aligned_prefill_chunk(100, 32, 100, 32) == 32
 
 
 def test_score_table_crosses_processes_and_drops_committing_rows(tmp_path):
