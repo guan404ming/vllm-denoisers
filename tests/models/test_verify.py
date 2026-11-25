@@ -14,6 +14,7 @@ from denoisers.models.common.verify import verify_block_diffusion
 from denoisers.runtime.model_state import ranged
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
 from denoisers.scheduler.resident_active import (
+    ACTIVE,
     DenoisersAsyncScheduler,
     DenoisersScheduler,
 )
@@ -64,6 +65,18 @@ def test_sequences_fit_the_batch_token_budget():
     assert scheduler.max_num_seqs == 3
     scheduler.max_num_batched_tokens = BLOCK - 1
     with pytest.raises(ValueError, match="canvas_length"):
+        verify_block_diffusion(config, hf_config, "test")
+
+
+def test_resact_fits_the_active_limit_and_keeps_residents():
+    config, hf_config = make_config()
+    scheduler = config.scheduler_config
+    scheduler.scheduler_cls = "resact"
+    scheduler.max_num_batched_tokens, scheduler.max_num_seqs = ACTIVE * BLOCK, 4 * ACTIVE
+    verify_block_diffusion(config, hf_config, "test")
+    assert scheduler.max_num_seqs == 4 * ACTIVE
+    scheduler.max_num_batched_tokens = ACTIVE * BLOCK - 1
+    with pytest.raises(ValueError, match="DENOISERS_ACTIVE"):
         verify_block_diffusion(config, hf_config, "test")
 
 

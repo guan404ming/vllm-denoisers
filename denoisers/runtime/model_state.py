@@ -47,11 +47,10 @@ class BlockDiffusionModelState(ModelState):
         super().__init__(vllm_config, model, encoder_cache, device)
         hf_config = self.model_config.hf_config
         policy = model.build_policy()
-        policy.dense_scores = scores.uses_probe(vllm_config.scheduler_config)
+        probed = scores.uses_probe(vllm_config.scheduler_config)
+        policy.dense_scores = probed and not policy.sparse_logits
         self.probe = (
-            scores.start(vllm_config)
-            if policy.dense_scores and get_tensor_model_parallel_rank() == 0
-            else None
+            scores.start(vllm_config) if probed and get_tensor_model_parallel_rank() == 0 else None
         )
         self.aligned = policy.aligned
         self.causal_commit = policy.causal_commit

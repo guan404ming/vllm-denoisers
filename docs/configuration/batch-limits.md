@@ -24,6 +24,7 @@ vllm serve google/diffusiongemma-26B-A4B-it --max-num-batched-tokens 4096
 - If you omit the flag, vLLM chooses a default for the GPU.
 - The budget must hold at least one canvas.
 - To serve fewer sequences, set `--max-num-seqs`.
+- With `--scheduler-cls resact`, the budget limits `DENOISERS_ACTIVE` instead. `--max-num-seqs` sets the resident count and can exceed the budget.
 
 ## Prefix caching
 

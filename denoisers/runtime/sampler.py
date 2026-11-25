@@ -334,7 +334,8 @@ class BlockDiffusionSampler(CanvasSampler):
         self._need[slots] = (after.canvas == state.mask_id).sum(1, dtype=torch.int32)
         if self.probe is not None:
             if entropy is None:
-                entropy = row_stats(logits, state.mask_id).entropy
+                masked = None if policy.dense_scores else have & (before.canvas == state.mask_id)
+                entropy = row_stats(logits, state.mask_id, active=masked).entropy
             scores = policy.probe_score(entropy, before, after)
             self.probe.record(
                 slots_np,

@@ -22,6 +22,7 @@ LEARNED = (RequestStatus.FINISHED_STOPPED, RequestStatus.FINISHED_LENGTH_CAPPED)
 
 class ResidentActiveScheduler(AlignedScheduler):
     uses_denoiser_scores = True
+    active_limit = ACTIVE
 
     def __new__(cls, vllm_config, *args, **kwargs):
         if cls is ResidentActiveScheduler:
