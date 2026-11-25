@@ -1,16 +1,30 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "vllm-denoisers"
-version = "0.1.0"
+version = "0.34.0"
 description = "vLLM plugin for diffusion language models"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "vllm-denoisers contributors" }]
+keywords = ["vllm", "diffusion language model", "inference", "serving"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 requires-python = ">=3.12"
 dependencies = ["torch", "transformers"]
 
 [project.optional-dependencies]
-vllm = ["vllm"]
+vllm = ["vllm>=0.34.0,<0.35"]
+
+[project.urls]
+Homepage = "https://github.com/guan404ming/vllm-denoisers"
+Documentation = "https://guan404ming.github.io/vllm-denoisers/"
+Issues = "https://github.com/guan404ming/vllm-denoisers/issues"
 
 [project.entry-points."vllm.general_plugins"]
 denoisers = "denoisers.plugin:register"
