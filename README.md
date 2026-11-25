@@ -7,7 +7,7 @@ Serve diffusion language models through vLLM
 </h3>
 
 <p align="center">
-| <a href="https://guan404ming.github.io/vllm-denoisers/"><b>Documentation</b></a> | <a href="https://guan404ming.github.io/vllm-denoisers/quickstart/"><b>Quick Start</b></a> | <a href="https://guan404ming.github.io/vllm-denoisers/models/"><b>Recipes</b></a> | <a href="https://guan404ming.github.io/vllm-denoisers/components/"><b>Components</b></a> | <a href="https://guan404ming.github.io/vllm-denoisers/contributor-guide/"><b>Developer Guide</b></a> |
+| <a href="https://guan404ming.github.io/vllm-denoisers/"><b>Documentation</b></a> | <a href="https://guan404ming.github.io/vllm-denoisers/quickstart/"><b>Quick Start</b></a> | <a href="https://guan404ming.github.io/vllm-denoisers/models/"><b>Recipes</b></a> | <a href="https://guan404ming.github.io/vllm-denoisers/user-guide/"><b>User Guide</b></a> | <a href="https://guan404ming.github.io/vllm-denoisers/contributor-guide/"><b>Developer Guide</b></a> |
 </p>
 
 <p align="center">
@@ -74,7 +74,7 @@ Visit our [documentation](https://guan404ming.github.io/vllm-denoisers/) to lear
 
 - [Installation](https://guan404ming.github.io/vllm-denoisers/installation/)
 - [Quick Start](https://guan404ming.github.io/vllm-denoisers/quickstart/)
-- [Serving Settings](https://guan404ming.github.io/vllm-denoisers/serving/)
+- [Settings Reference](https://guan404ming.github.io/vllm-denoisers/configuration/settings/)
 - [Benchmarking](https://guan404ming.github.io/vllm-denoisers/benchmarking/)
 
 ## Versioning

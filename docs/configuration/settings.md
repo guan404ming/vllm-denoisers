@@ -1,4 +1,4 @@
-# Settings
+# Settings reference
 
 This page lists every setting that the plugin reads. Each recipe shows the settings its checkpoint needs.
 
@@ -8,9 +8,9 @@ Pass these flags to `vllm serve`.
 
 | Flag | Use |
 | --- | --- |
-| `--scheduler-cls` | `aligned`, `resact`, or a class path. Omit it for automatic selection. See [Schedulers](components/schedulers.md). |
-| `--attention-backend` | `TRITON_ATTN` (default) or `FLASH_ATTN`. See [Installation](installation.md#choose-an-attention-backend). |
-| `--max-num-batched-tokens` | Batch token budget for one step. See [Batch and canvas limits](serving.md). |
+| `--scheduler-cls` | `aligned`, `resact`, or a class path. Omit it for automatic selection. See [Request scheduling](../features/request-scheduling.md). |
+| `--attention-backend` | `TRITON_ATTN` (default) or `FLASH_ATTN`. See [Installation](../installation.md#choose-an-attention-backend). |
+| `--max-num-batched-tokens` | Batch token budget for one step. See [Batch limits](batch-limits.md). |
 | `--max-num-seqs` | Upper limit of concurrent sequences. The plugin lowers it to fit the batch token budget. With `resact`, it sets how many requests stay resident. |
 | `--max-model-len` | Longest prompt plus response. |
 | `--block-size`, `--prefix-match-unit` | For aligned policies, an explicit value must be a multiple of the canvas length. |
@@ -26,12 +26,12 @@ Pass these keys in `--hf-overrides`. Each recipe lists more keys for its model f
 
 | Key | Use |
 | --- | --- |
-| `decode_policy` | Decode policy name. See [Decode policies](components/decode.md). |
-| `kv_policy` | `masked` or `window`. See [KV cache reuse](kv-cache.md). |
+| `decode_policy` | Decode policy name. See [Decode policies](../features/decode-policies.md). |
+| `kv_policy` | `masked` or `window`. See [KV cache reuse](../features/kv-cache-reuse.md). |
 | `kv_refresh` | Step interval for periodic full passes. |
 | `prefix_look`, `after_look` | Widen the focus window of the `window` KV policy. |
-| `feedback_policy` | `smooth` or `self_conditioning`. See [Feedback policies](components/feedback.md). |
-| `lm_head_quantization` | `fp8` or `int4`. See [Output-head quantization](serving.md#output-head-quantization). |
+| `feedback_policy` | `smooth` or `self_conditioning`. See [Prediction feedback](../features/prediction-feedback.md). |
+| `lm_head_quantization` | `fp8` or `int4`. See [Output-head quantization](../features/output-head-quantization.md). |
 | `canvas_length` | Canvas width, for families that support more than one. |
 | `denoise_steps` | Step budget of one canvas. |
 
@@ -51,5 +51,5 @@ Pass these keys in `SamplingParams.extra_args`, or in `vllm_xargs` through the A
 
 | Key | Use |
 | --- | --- |
-| `decode_policy` | Select a registered decode policy for one request. See [Extend the plugin](extending.md#decode-policy). |
-| `diffusion_*` | DiffusionGemma request controls. See [DiffusionGemma](models/diffusion-gemma.md#request-controls). |
+| `decode_policy` | Select a registered decode policy for one request. See [Extend the plugin](../extending.md#decode-policy). |
+| `diffusion_*` | DiffusionGemma request controls. See [DiffusionGemma](../models/diffusion-gemma.md#request-controls). |
