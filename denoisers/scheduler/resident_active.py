@@ -7,10 +7,10 @@ from vllm.logger import init_logger
 from vllm.v1.core.sched.diffusion_scheduler import diffusion_canvas_width
 from vllm.v1.request import RequestStatus
 
-from denoisers import probe
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
 from denoisers.scheduler.hold import registry
 from denoisers.scheduler.remaining import RemainingWork
+from denoisers.scheduler.scores import ScoreTable, table_path
 
 logger = init_logger("vllm.denoisers")
 
@@ -35,9 +35,7 @@ class ResidentActiveScheduler(AlignedScheduler):
     def __init__(self, vllm_config, *args, **kwargs):
         super().__init__(vllm_config, *args, **kwargs)
         self.hold = registry.resolve(HOLD).from_env()
-        self.scores = probe.ScoreTable(
-            probe.table_path(vllm_config), vllm_config.scheduler_config.max_num_seqs
-        )
+        self.scores = ScoreTable(table_path(vllm_config), vllm_config.scheduler_config.max_num_seqs)
         self.work = RemainingWork()
         self.steps = Counter()
 

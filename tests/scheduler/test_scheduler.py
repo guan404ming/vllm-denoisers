@@ -3,10 +3,10 @@ import math
 import pytest
 import torch
 
-from denoisers import probe
 from denoisers.scheduler import aligned_prefill_chunk
 from denoisers.scheduler.hold import Aging, ShortestFirst
 from denoisers.scheduler.remaining import RemainingWork
+from denoisers.scheduler.scores import Probe, ScoreTable
 
 
 def test_aligned_prefill_chunk():
@@ -20,9 +20,9 @@ def test_aligned_prefill_chunk():
 
 def test_score_table_crosses_processes_and_drops_committing_rows(tmp_path):
     path = str(tmp_path / "scores")
-    reader = probe.ScoreTable(path, 4)
+    reader = ScoreTable(path, 4)
     assert reader.read(["a"]) == {}
-    writer = probe.Probe(probe.ScoreTable(path, 4, create=True))
+    writer = Probe(ScoreTable(path, 4, create=True))
     idle = torch.tensor([False])
     writer.record(
         [2, 0],
@@ -65,8 +65,8 @@ def test_reserve_runs_the_oldest_held_requests():
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU")
 def test_probe_waits_for_scores_on_the_copy_stream(tmp_path):
-    table = probe.ScoreTable(str(tmp_path / "scores"), 1, create=True)
-    writer = probe.Probe(table)
+    table = ScoreTable(str(tmp_path / "scores"), 1, create=True)
+    writer = Probe(table)
     stream = torch.cuda.Stream()
     with torch.cuda.stream(stream):
         scores = torch.tensor([2.0], device="cuda")
