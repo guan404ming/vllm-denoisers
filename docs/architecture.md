@@ -7,7 +7,7 @@ The plugin registers checkpoint architectures through vLLM's `vllm.general_plugi
 | Component | Responsibility |
 | --- | --- |
 | [Family registry](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/models/families.py) | Connect a checkpoint architecture to its model adapter, config verifier, and optional tokenizer. |
-| [Model state](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/runtime/model_state.py) | Prepare input tokens, embeddings, and attention metadata. Install the canvas sampler in the vLLM worker. |
+| [Model state](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/runtime/model_state.py) | Prepare input tokens, embeddings, and attention metadata. With `TRITON_ATTN`, give each prompt block its own attention segment in place of a range mask. Install the canvas sampler in the vLLM worker. |
 | [FlashAttention backend](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/runtime/attention.py) | Allocate block-range buffers so that stock FlashAttention can mask block-aligned prefill. |
 | [Canvas sampler](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/runtime/sampler.py) | Return emitted token IDs and per-request counts to vLLM. The token-canvas sampler also selects LM-head positions and groups requests by decoder. |
 | [Canvas transition](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/canvas/transition.py) | Apply the policy, track convergence, emit completed tokens, and initialize the next canvas. |

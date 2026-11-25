@@ -31,5 +31,10 @@ def prefill_block_ranges(seq_len: int, block_length: int) -> list[tuple[int, int
     ]
 
 
+def prefill_segments(start: int, length: int, block_length: int) -> list[int]:
+    stop = start + length
+    return [*range(start - start % block_length + block_length, stop, block_length), stop]
+
+
 def free_ranges(ranges: dict, prefilling: np.ndarray) -> dict:
     return ranges | {int(row): [FREE] for row in np.flatnonzero(~prefilling)}
