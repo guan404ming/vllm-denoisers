@@ -4,10 +4,9 @@ Choose the part of serving you want to change. Each policy setting accepts a reg
 
 | Component | What it controls | Setting |
 | --- | --- | --- |
-| [Schedulers](schedulers.md) | Prefill alignment and request scheduling | `--scheduler-cls` |
+| [Schedulers](schedulers.md) | Prefill alignment, request scheduling, and [hold policies](schedulers.md#hold-policies) | `--scheduler-cls` |
 | [Decode policies](decode.md) | Which canvas positions to update | `decode_policy` |
 | [KV policies](kv.md) | Which cached positions to recompute | `kv_policy` |
 | [Input policies](input.md) | Embeddings for the next denoising step | `input_policy` |
-| [Hold policies](schedulers.md#hold-policies) | Which resident requests advance | `DENOISERS_HOLD` |
 
 [Implement a custom policy](../extending.md).

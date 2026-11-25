@@ -7,7 +7,6 @@ Each policy registry accepts a short name or an importable class path in the ser
 | Decode | `decode_policy` | [LowConfidence](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/decode/low_confidence.py) |
 | KV | `kv_policy` | [Window](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/kv/window.py) |
 | Input | `input_policy` | [SelfConditioning](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/inputs/self_conditioning.py) |
-| Hold | `DENOISERS_HOLD` | [ShortestFirst](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/scheduler/hold/sjf.py) |
 
 ## Decode policy
 
@@ -37,7 +36,11 @@ The built-in `window` policy uses the decoder's `focus` mask, widened by `prefix
 
 Implement `soft(logits, have, before, after)` to calculate a soft input and `condition(embeds, soft)` to combine it with token embeddings. The `have` mask identifies positions with logits. See the [smooth policy](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/inputs/smooth.py) for a weighted embedding on masked positions and the [DiffusionGemma guide](models/diffusion-gemma.md) for self-conditioning.
 
-## Hold policy
+## Scheduler
+
+The resident/active scheduler ranks requests with a hold policy. Set `DENOISERS_HOLD` to a registered name or a class path. See [ShortestFirst](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/scheduler/hold/sjf.py) for an existing implementation.
+
+### Hold policy
 
 Implement `rank(candidates, now, scores)`. Return request IDs in priority order. Each candidate contains a request ID and an arrival time. The scheduler defers requests beyond the active limit. See [Scheduling](scheduling.md) for a working server configuration.
 
