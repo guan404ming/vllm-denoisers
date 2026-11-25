@@ -5,13 +5,10 @@
 ## Start the server
 
 ```bash
-vllm serve inclusionAI/LLaDA2.0-mini \
-  --attention-backend TRITON_ATTN --block-size 32 \
-  --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 \
-  --generation-config vllm
+vllm serve inclusionAI/LLaDA2.0-mini --max-model-len 2048 --generation-config vllm
 ```
 
-LLaDA2 refines 32 positions at a time. A cache block of 32 keeps prefix caching aligned with the canvas. Wait for the API server to accept connections on port 8000.
+LLaDA2 refines 32 positions at a time. Wait for the API server to accept connections on port 8000.
 
 ## Send a request
 

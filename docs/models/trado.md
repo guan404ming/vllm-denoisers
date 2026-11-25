@@ -10,9 +10,7 @@ organization: Gen-Verse
 ## Serve
 
 ```bash
-vllm serve Gen-Verse/TraDo-8B-Instruct \
-  --attention-backend TRITON_ATTN --block-size 16 \
-  --generation-config vllm
+vllm serve Gen-Verse/TraDo-8B-Instruct --generation-config vllm
 ```
 
 ## Decoding

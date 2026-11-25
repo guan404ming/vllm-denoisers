@@ -11,15 +11,13 @@ organization: nvidia
 
 ```bash
 vllm serve nvidia/Nemotron-Labs-Diffusion-3B \
-  --attention-backend TRITON_ATTN --block-size 32 --max-model-len 2048 \
-  --max-num-seqs 4 --max-num-batched-tokens 2048 --generation-config vllm
+  --max-model-len 2048 --max-num-seqs 4 --generation-config vllm
 ```
 
 ## Image input
 
 ```bash
 vllm serve nvidia/Nemotron-Labs-Diffusion-VLM-8B \
-  --attention-backend TRITON_ATTN --block-size 32 \
   --max-model-len 8192 --max-num-seqs 4 --max-num-batched-tokens 8192 --generation-config vllm
 ```
 

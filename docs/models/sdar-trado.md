@@ -10,9 +10,7 @@ organization: JetLM
 ## Serve
 
 ```bash
-vllm serve JetLM/SDAR-1.7B-Chat \
-  --attention-backend TRITON_ATTN --block-size 16 \
-  --generation-config vllm
+vllm serve JetLM/SDAR-1.7B-Chat --generation-config vllm
 ```
 
 ## Decoding
@@ -24,5 +22,5 @@ vllm serve JetLM/SDAR-1.7B-Chat \
 
 ## Notes
 
-- For `JetLM/SDAR-1.7B-Chat-b32`, pass `--hf-overrides '{"canvas_length":32}' --block-size 32`.
+- For `JetLM/SDAR-1.7B-Chat-b32`, pass `--hf-overrides '{"canvas_length":32}'`.
 - The SDAR MoE adapter supports the 30B-A3B family.

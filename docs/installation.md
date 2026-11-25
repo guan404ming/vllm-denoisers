@@ -14,17 +14,16 @@ uv pip install 'vllm-denoisers[vllm]'
 
 If you already have vLLM 0.34 installed, run `uv pip install vllm-denoisers` in that environment. To work on the plugin, run `uv pip install -e '.[vllm]'` from the root of this repository. For hardware and driver requirements, see the [vLLM installation guide](https://docs.vllm.ai/en/latest/getting_started/installation.html).
 
-## Check plugin discovery
+## Check the installation
 
 ```bash
-python -c 'from importlib.metadata import entry_points
-print(entry_points(group="vllm.general_plugins")["denoisers"].value)'
+uv pip show vllm-denoisers
 ```
 
-The expected output is `denoisers.plugin:register`. vLLM loads installed general plugins by default. If you set `VLLM_PLUGINS`, include `denoisers` in the list.
+vLLM loads installed plugins by default. If you set `VLLM_PLUGINS`, include `denoisers` in the list.
 
 ## Choose an attention backend
 
-Use `TRITON_ATTN` or `FLASH_ATTN` for the shared canvas runtime on stock vLLM. `FLASH_ATTN` needs FlashAttention 4. Block-aligned prefill on `FLASH_ATTN` also needs a model without sliding-window attention.
+The default backend is `TRITON_ATTN`. To use FlashAttention, pass `--attention-backend FLASH_ATTN`. It needs FlashAttention 4. Block-aligned prefill on `FLASH_ATTN` also needs a model without sliding-window attention.
 
 Continue with the [quick start](quickstart.md).

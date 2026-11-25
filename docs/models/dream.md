@@ -11,8 +11,7 @@ organization: Dream-org
 
 ```bash
 vllm serve Dream-org/Dream-v0-Instruct-7B \
-  --attention-backend TRITON_ATTN --no-enable-prefix-caching \
-  --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 --generation-config vllm
+  --no-enable-prefix-caching --max-model-len 2048 --generation-config vllm
 ```
 
 ## Decoding

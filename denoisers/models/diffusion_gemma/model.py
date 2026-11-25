@@ -1,9 +1,7 @@
-from vllm.config.scheduler import SchedulerConfig
 from vllm.model_executor.models.config import Gemma4Config, VerifyAndUpdateConfig
 from vllm.model_executor.models.diffusion_gemma import (
     DiffusionGemmaForConditionalGeneration,
 )
-from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 from denoisers.models.common.mixin import BlockDiffusionModel
 from denoisers.models.common.verify import verify_block_diffusion
@@ -16,12 +14,6 @@ class DiffusionGemmaForBlockDiffusionConfig(VerifyAndUpdateConfig):
     @classmethod
     def verify_and_update_config(cls, vllm_config) -> None:
         Gemma4Config.verify_and_update_config(vllm_config)
-        attention = vllm_config.attention_config
-        if attention.backend is None:
-            fa4 = attention.flash_attn_version == 4
-            attention.backend = (
-                AttentionBackendEnum.FLASH_ATTN if fa4 else AttentionBackendEnum.TRITON_ATTN
-            )
         model_config = vllm_config.model_config
         hf_config = model_config.hf_config
         generation = model_config.try_get_generation_config()
@@ -49,9 +41,6 @@ class DiffusionGemmaForBlockDiffusionConfig(VerifyAndUpdateConfig):
         hf_config.mask_token_id = -1
         if "max_new_tokens" not in model_config.override_generation_config:
             model_config.override_generation_config["max_new_tokens"] = None
-        scheduler = vllm_config.scheduler_config
-        if scheduler.max_num_seqs == SchedulerConfig.DEFAULT_MAX_NUM_SEQS:
-            scheduler.max_num_seqs = 8
         verify_block_diffusion(vllm_config, hf_config, "DiffusionGemma")
 
 

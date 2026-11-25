@@ -10,9 +10,8 @@ Use the optional resident/active scheduler to give some decoding requests priori
 
 ```bash
 DENOISERS_ACTIVE=16 vllm serve inclusionAI/LLaDA2.0-mini \
-  --scheduler-cls resact \
-  --attention-backend TRITON_ATTN --block-size 32 --max-num-seqs 32 \
-  --max-num-batched-tokens 2048 --max-model-len 2048 --generation-config vllm
+  --scheduler-cls resact --max-num-seqs 32 \
+  --max-model-len 2048 --generation-config vllm
 ```
 
 This example keeps up to 32 requests resident and advances 16 on each step. `DENOISERS_RESERVE` (default 0.125) gives that share of the steps to the oldest requests. Prefill chunks align with the canvas. For synchronous scheduling, add `--no-async-scheduling`.

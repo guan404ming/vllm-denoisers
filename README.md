@@ -12,6 +12,7 @@ Serve diffusion language models through vLLM
 
 <p align="center">
 <a href="https://github.com/guan404ming/vllm-denoisers/actions/workflows/docs.yml"><img alt="Documentation CI" src="https://github.com/guan404ming/vllm-denoisers/actions/workflows/docs.yml/badge.svg?branch=main"></a>
+<a href="https://pypi.org/project/vllm-denoisers/"><img alt="PyPI version" src="https://img.shields.io/pypi/v/vllm-denoisers.svg"></a>
 <a href="https://github.com/guan404ming/vllm-denoisers/blob/main/pyproject.toml"><img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue.svg"></a>
 <a href="https://github.com/vllm-project/vllm/releases/tag/v0.34.0"><img alt="vLLM 0.34" src="https://img.shields.io/badge/vLLM-0.34-orange.svg"></a>
 </p>
@@ -65,10 +66,7 @@ uv pip install 'vllm-denoisers[vllm]'
 Serve LLaDA2:
 
 ```bash
-vllm serve inclusionAI/LLaDA2.0-mini \
-  --attention-backend TRITON_ATTN --block-size 32 \
-  --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 \
-  --generation-config vllm
+vllm serve inclusionAI/LLaDA2.0-mini --max-model-len 2048 --generation-config vllm
 ```
 
 Visit our [documentation](https://guan404ming.github.io/vllm-denoisers/) to learn more.

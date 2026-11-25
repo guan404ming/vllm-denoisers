@@ -51,6 +51,30 @@ def test_kv_policy_turns_off_default_async_scheduling():
     assert config.scheduler_config.async_scheduling is False
 
 
+def test_sequences_fit_the_batch_token_budget():
+    config, hf_config = make_config()
+    scheduler = config.scheduler_config
+    scheduler.max_num_batched_tokens, scheduler.max_num_seqs = 5 * BLOCK, 1024
+    verify_block_diffusion(config, hf_config, "test")
+    assert scheduler.max_num_seqs == 5
+    scheduler.max_num_seqs = 3
+    verify_block_diffusion(config, hf_config, "test")
+    assert scheduler.max_num_seqs == 3
+    scheduler.max_num_batched_tokens = BLOCK - 1
+    with pytest.raises(ValueError, match="canvas_length"):
+        verify_block_diffusion(config, hf_config, "test")
+
+
+def test_attention_backend_defaults_to_triton():
+    config, hf_config = make_config()
+    config.attention_config.backend = None
+    verify_block_diffusion(config, hf_config, "test")
+    assert config.attention_config.backend is AttentionBackendEnum.TRITON_ATTN
+    config.attention_config.backend = AttentionBackendEnum.FLASHINFER
+    with pytest.raises(ValueError, match="TRITON_ATTN or FLASH_ATTN"):
+        verify_block_diffusion(config, hf_config, "test")
+
+
 def test_flash_ranges_need_fa4_global_layers_and_a_bidirectional_commit():
     def model(version, window):
         decoder = SimpleNamespace(
