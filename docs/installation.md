@@ -24,6 +24,6 @@ vLLM loads installed plugins by default. If you set `VLLM_PLUGINS`, include `den
 
 ## Choose an attention backend
 
-The default backend is `TRITON_ATTN`. To use FlashAttention, pass `--attention-backend FLASH_ATTN`. It needs FlashAttention 4. Block-aligned prefill on `FLASH_ATTN` also needs a model without sliding-window attention.
+The plugin chooses the backend. It uses `FLASH_ATTN` when FlashAttention 4 is available and the model fits, and `TRITON_ATTN` otherwise. To choose one yourself, pass `--attention-backend TRITON_ATTN` or `--attention-backend FLASH_ATTN`. The plugin chooses `TRITON_ATTN` for a model with sliding-window attention and for a decode policy with a causal commit, such as DiffusionGemma.
 
 Continue with the [quick start](quickstart.md).

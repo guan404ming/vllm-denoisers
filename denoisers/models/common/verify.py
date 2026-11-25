@@ -1,6 +1,8 @@
+from vllm.config import set_current_vllm_config
 from vllm.config.diffusion import DiffusionConfig
 from vllm.logger import init_logger
 from vllm.model_executor.models.config import VerifyAndUpdateConfig
+from vllm.v1.attention.backends.fa_utils import get_flash_attn_version
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 from denoisers.models.common.config import DecodeConfig
@@ -10,6 +12,16 @@ from denoisers.scheduler import select_scheduler
 logger = init_logger("vllm.denoisers")
 
 BACKENDS = (AttentionBackendEnum.TRITON_ATTN, AttentionBackendEnum.FLASH_ATTN)
+
+
+def default_backend(vllm_config, policy) -> AttentionBackendEnum:
+    with set_current_vllm_config(vllm_config):
+        version = get_flash_attn_version(
+            head_size=vllm_config.model_config.get_head_size(), supports_fa4_hd256=True
+        )
+    if version != 4 or policy.causal_commit or vllm_config.cache_config.sliding_window is not None:
+        return AttentionBackendEnum.TRITON_ATTN
+    return AttentionBackendEnum.FLASH_ATTN
 
 
 def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
@@ -53,7 +65,7 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
         scheduler.async_scheduling = False
     attention = vllm_config.attention_config
     if attention.backend is None:
-        attention.backend = AttentionBackendEnum.TRITON_ATTN
+        attention.backend = default_backend(vllm_config, policy)
     if attention.backend not in BACKENDS:
         raise ValueError(f"{name} needs --attention-backend TRITON_ATTN or FLASH_ATTN.")
 
