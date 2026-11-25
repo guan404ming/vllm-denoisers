@@ -44,8 +44,8 @@ class DiffusionGemmaForBlockDiffusionConfig(VerifyAndUpdateConfig):
         )
         hf_config.sparse_self_conditioning = getattr(hf_config, "sparse_self_conditioning", True)
         hf_config.decode_policy = "entropy_bound"
-        if not hasattr(hf_config, "input_policy"):
-            hf_config.input_policy = "self_conditioning"
+        if not hasattr(hf_config, "feedback_policy"):
+            hf_config.feedback_policy = "self_conditioning"
         hf_config.mask_token_id = -1
         if "max_new_tokens" not in model_config.override_generation_config:
             model_config.override_generation_config["max_new_tokens"] = None

@@ -1,11 +1,11 @@
 import torch
 
 from denoisers.canvas.rows import CanvasRows
-from denoisers.policies.inputs.interface import InputPolicy, registry
+from denoisers.policies.feedback.interface import FeedbackPolicy, registry
 
 
 @registry.register("self_conditioning")
-class SelfConditioning(InputPolicy):
+class SelfConditioning(FeedbackPolicy):
     def __init__(self, model):
         self.model = model
         self.hidden_size = model.input_embedding().weight.shape[1]

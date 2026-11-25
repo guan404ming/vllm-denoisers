@@ -2,7 +2,7 @@ import torch
 
 from denoisers.canvas.rows import CanvasRows
 from denoisers.ops.embedding import ExpectedEmbedding
-from denoisers.policies.inputs.interface import InputPolicy, registry
+from denoisers.policies.feedback.interface import FeedbackPolicy, registry
 
 try:
     from vllm.distributed import get_tensor_model_parallel_world_size
@@ -11,7 +11,7 @@ except ImportError:
 
 
 @registry.register("smooth")
-class Smooth(InputPolicy):
+class Smooth(FeedbackPolicy):
     def __init__(
         self,
         embedding: ExpectedEmbedding,

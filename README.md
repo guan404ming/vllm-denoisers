@@ -42,7 +42,7 @@ vllm-denoisers is efficient with:
 vllm-denoisers is flexible and easy to use with:
 
 - Installation as a vLLM plugin, served with `vllm serve`
-- Replaceable decode, KV, input, and scheduling policies
+- Replaceable decode, KV, feedback, and scheduling policies
 - Registries for custom policies and model families
 
 vllm-denoisers supports these model families:

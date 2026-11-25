@@ -3,7 +3,7 @@ from vllm.model_executor.models.config import VerifyAndUpdateConfig
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 from denoisers.models.common.config import DecodeConfig
-from denoisers.policies import decode, inputs, kv
+from denoisers.policies import decode, feedback, kv
 from denoisers.scheduler import select_scheduler
 
 BACKENDS = (AttentionBackendEnum.TRITON_ATTN, AttentionBackendEnum.FLASH_ATTN)
@@ -37,8 +37,8 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
             f"that is a multiple of canvas_length {canvas}."
         )
     select_scheduler(scheduler, align_prefill=aligned and scheduler.enable_chunked_prefill)
-    if getattr(hf_config, "input_policy", None) is not None:
-        inputs.registry.resolve(hf_config.input_policy)
+    if getattr(hf_config, "feedback_policy", None) is not None:
+        feedback.registry.resolve(hf_config.feedback_policy)
     if getattr(hf_config, "kv_policy", None) is not None:
         kv.registry.resolve(hf_config.kv_policy)
         if scheduler.async_scheduling:

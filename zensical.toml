@@ -29,7 +29,7 @@ nav = [
         "components/schedulers.md",
         "components/decode.md",
         "components/kv.md",
-        "components/input.md",
+        "components/feedback.md",
     ] },
     { "User guide" = [
         { "Overview" = "user-guide.md" },
