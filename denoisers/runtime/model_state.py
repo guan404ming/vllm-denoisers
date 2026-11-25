@@ -17,6 +17,7 @@ from denoisers.runtime.batch import (
     free_ranges,
     per_token,
     prefill_block_ranges,
+    prefill_segments,
 )
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime
@@ -300,6 +301,57 @@ class BlockDiffusionModelState(ModelState):
         }
         return ranges or None
 
+    def _segments(
+        self,
+        input_batch,
+        ranges,
+        seq_lens,
+        causal,
+        block_tables,
+        slot_mappings,
+        attn_groups,
+        kv_cache_config,
+    ) -> dict[str, Any]:
+        actual = input_batch.num_reqs
+        starts = input_batch.query_start_loc_np[: actual + 1]
+        computed = input_batch.num_computed_prefill_tokens_np
+        owner, lengths, ends = [], [], []
+        for row in range(actual):
+            length = int(starts[row + 1] - starts[row])
+            if row not in ranges:
+                owner.append(row)
+                lengths.append(length)
+                ends.append(-1)
+                continue
+            last = int(computed[row])
+            for cut in prefill_segments(last, length, self.state.block_length):
+                owner.append(row)
+                lengths.append(cut - last)
+                ends.append(cut)
+                last = cut
+        owner_gpu = async_tensor_h2d(np.asarray(owner, dtype=np.int64), device=self.device)
+        ends_np = np.asarray(ends, dtype=np.int32)
+        ends_gpu = async_tensor_h2d(ends_np, device=self.device)
+        split = ends_gpu >= 0
+        loc = np.zeros(len(owner) + 1, dtype=starts.dtype)
+        loc[1:] = np.cumsum(lengths)
+        whole = (computed[:actual] + np.diff(starts)).astype(np.int32)[np.asarray(owner)]
+        return build_attn_metadata(
+            attn_groups=attn_groups,
+            num_reqs=len(owner),
+            num_tokens=input_batch.num_tokens,
+            query_start_loc_gpu=async_tensor_h2d(loc, device=self.device),
+            query_start_loc_cpu=torch.from_numpy(loc),
+            max_query_len=max(lengths),
+            seq_lens=torch.where(split, ends_gpu.to(seq_lens.dtype), seq_lens[owner_gpu]),
+            max_seq_len=self.max_model_len,
+            block_tables=[table[owner_gpu] for table in block_tables],
+            slot_mappings=slot_mappings,
+            kv_cache_config=kv_cache_config,
+            causal=torch.where(split, torch.zeros_like(causal[owner_gpu]), causal[owner_gpu]),
+            seq_lens_cpu_upper_bound=torch.from_numpy(np.where(ends_np >= 0, ends_np, whole)),
+        )
+
     def prepare_attn(
         self,
         input_batch,
@@ -336,6 +388,17 @@ class BlockDiffusionModelState(ModelState):
             self._remap_slots(input_batch, block_tables, slot_mappings, kv_cache_config)
         ranges = None if for_capture else self._doc_ranges(input_batch)
         causal = self._causal_buf[:num_reqs]
+        if ranges and not self.ranged and cudagraph_mode != CUDAGraphMode.FULL:
+            return self._segments(
+                input_batch,
+                ranges,
+                seq_lens,
+                causal,
+                block_tables,
+                slot_mappings,
+                attn_groups,
+                kv_cache_config,
+            )
         bound = None
         if ranges:
             bound = torch.zeros(num_reqs, dtype=torch.int32)

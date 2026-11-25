@@ -1,3 +1,4 @@
+import pytest
 import torch
 from support import make_rows
 
@@ -6,6 +7,7 @@ from denoisers.canvas.transition import advance
 from denoisers.ops.sampling import sample
 from denoisers.policies.decode.indel import Indel
 from denoisers.policies.decode.low_confidence import LowConfidence
+from denoisers.runtime.batch import prefill_block_ranges, prefill_segments
 
 MASK = 9
 BLOCK = 8
@@ -61,3 +63,16 @@ def test_truncated_block_blocks_indel_edit_ops():
     assert (after.canvas[1, 1:] != delete).all() and after.canvas[1, 1:].tolist() != [4] * (
         BLOCK - 1
     )
+
+
+@pytest.mark.parametrize(("start", "length"), [(0, 10), (8, 8), (8, 5), (4, 1), (0, 4), (6, 7)])
+def test_prefill_segments_see_the_same_keys_as_block_ranges(start, length):
+    block = 4
+    ranges = prefill_block_ranges(start + length, block)
+    last = start
+    for cut in prefill_segments(start, length, block):
+        for query in range(last, cut):
+            own = next((range(a, b + 1) for a, b in ranges if a <= query <= b), range(0))
+            assert set(range(cut)) == set(range(query + 1)) | set(own)
+        last = cut
+    assert last == start + length
