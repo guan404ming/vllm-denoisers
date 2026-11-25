@@ -8,6 +8,7 @@ from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from denoisers.models.common.config import DecodeConfig
 from denoisers.policies import decode, feedback, kv
 from denoisers.scheduler import select_scheduler
+from denoisers.scheduler.scores import uses_probe
 
 logger = init_logger("vllm.denoisers")
 
@@ -53,12 +54,7 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
     fit = scheduler.max_num_batched_tokens // canvas
     if not fit:
         raise ValueError(f"{name} needs max_num_batched_tokens >= canvas_length.")
-    active = getattr(scheduler.get_scheduler_cls(), "active_limit", None)
-    if active is not None and active > fit:
-        raise ValueError(
-            f"{name} needs max_num_batched_tokens >= DENOISERS_ACTIVE * canvas_length."
-        )
-    if active is None and fit < scheduler.max_num_seqs:
+    if fit < scheduler.max_num_seqs and not uses_probe(scheduler):
         logger.info("%s: max_num_seqs %d -> %d to fit the batch", name, scheduler.max_num_seqs, fit)
         scheduler.max_num_seqs = fit
     if getattr(hf_config, "feedback_policy", None) is not None:
