@@ -297,7 +297,7 @@ class BlockDiffusionModelState(ModelState):
             int(row): prefill_block_ranges(
                 int(computed[row] + query_lens[row]), self.state.block_length
             )
-            for row in np.where(num_logits == 0)[0]
+            for row in np.where((num_logits == 0) & input_batch.is_prefilling_np[:num_reqs])[0]
         }
         return ranges or None
 

@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 pytest.importorskip("vllm")
@@ -11,7 +12,7 @@ from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, Diff
 
 from denoisers.models.common import verify
 from denoisers.models.common.verify import verify_block_diffusion
-from denoisers.runtime.model_state import ranged
+from denoisers.runtime.model_state import BlockDiffusionModelState, ranged
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
 from denoisers.scheduler.resident_active import (
     DenoisersAsyncScheduler,
@@ -137,6 +138,20 @@ def test_flash_ranges_need_fa4_global_layers_and_a_bidirectional_commit():
     ):
         with pytest.raises(ValueError, match="TRITON_ATTN"):
             ranged(flash, bad_policy, bad_model)
+
+
+def test_block_ranges_cover_prefilling_rows_only():
+    runtime = object.__new__(BlockDiffusionModelState)
+    runtime.aligned = runtime.causal_prefill = True
+    runtime.state = SimpleNamespace(block_length=4)
+    batch = SimpleNamespace(
+        num_reqs=3,
+        cu_num_logits_np=np.array([0, 0, 0, 4]),
+        query_start_loc_np=np.array([0, 6, 7, 11]),
+        num_computed_prefill_tokens_np=np.array([0, 5, 6]),
+        is_prefilling_np=np.array([True, False, False]),
+    )
+    assert runtime._doc_ranges(batch) == {0: [(0, 3), (4, 5)]}
 
 
 class ExternalScheduler(DenoisersScheduler):
