@@ -10,4 +10,14 @@ For automatic selection, omit `--scheduler-cls`. To enable resident/active sched
 
 Both names follow vLLM’s scheduling mode. Add `--no-async-scheduling` for synchronous execution. For a custom scheduler, pass its full class path.
 
-[Serving example](../scheduling.md) · [Hold policies](hold.md)
+## Hold policies
+
+With a resident/active scheduler, set `DENOISERS_HOLD` to choose a `HoldPolicy`. For example, `DENOISERS_HOLD=aging DENOISERS_AGE_S=2` increases priority with wait time. `DENOISERS_ACTIVE` sets how many resident requests advance on one step. `DENOISERS_RESERVE` gives a share of them to the oldest requests.
+
+| Registered name | Class | Direct base | Behavior |
+| --- | --- | --- | --- |
+| `sjf` | `ShortestFirst` | `HoldPolicy` | Prefer fewer expected remaining steps. |
+| `aging` | `Aging` | `HoldPolicy` | Increase priority with time spent waiting. |
+| `random` | `RandomOrder` | `HoldPolicy` | Shuffle candidate requests. |
+
+[Serving example](../scheduling.md)

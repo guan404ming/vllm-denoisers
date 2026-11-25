@@ -30,7 +30,6 @@ nav = [
         "components/decode.md",
         "components/kv.md",
         "components/input.md",
-        "components/hold.md",
     ] },
     { "User guide" = [
         { "Overview" = "user-guide.md" },
