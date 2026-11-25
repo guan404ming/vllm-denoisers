@@ -1,10 +1,13 @@
 from vllm.config.diffusion import DiffusionConfig
+from vllm.logger import init_logger
 from vllm.model_executor.models.config import VerifyAndUpdateConfig
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
 from denoisers.models.common.config import DecodeConfig
 from denoisers.policies import decode, feedback, kv
 from denoisers.scheduler import select_scheduler
+
+logger = init_logger("vllm.denoisers")
 
 BACKENDS = (AttentionBackendEnum.TRITON_ATTN, AttentionBackendEnum.FLASH_ATTN)
 
@@ -18,8 +21,12 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
     if vllm_config.diffusion_config.canvas_length != hf_config.canvas_length:
         raise ValueError(f"{name} needs canvas_length {hf_config.canvas_length}.")
     scheduler = vllm_config.scheduler_config
-    if scheduler.max_num_batched_tokens < scheduler.max_num_seqs * hf_config.canvas_length:
-        raise ValueError(f"{name} needs max_num_batched_tokens >= max_num_seqs * canvas_length.")
+    fit = scheduler.max_num_batched_tokens // hf_config.canvas_length
+    if not fit:
+        raise ValueError(f"{name} needs max_num_batched_tokens >= canvas_length.")
+    if fit < scheduler.max_num_seqs:
+        logger.info("%s: max_num_seqs %d -> %d to fit the batch", name, scheduler.max_num_seqs, fit)
+        scheduler.max_num_seqs = fit
     if vllm_config.parallel_config.pipeline_parallel_size > 1:
         raise ValueError(f"{name} does not support pipeline parallelism.")
     if vllm_config.parallel_config.enable_batch_sharded_sampling:
@@ -44,7 +51,10 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
         if scheduler.async_scheduling:
             raise ValueError(f"{name} kv_policy needs --no-async-scheduling.")
         scheduler.async_scheduling = False
-    if vllm_config.attention_config.backend not in BACKENDS:
+    attention = vllm_config.attention_config
+    if attention.backend is None:
+        attention.backend = AttentionBackendEnum.TRITON_ATTN
+    if attention.backend not in BACKENDS:
         raise ValueError(f"{name} needs --attention-backend TRITON_ATTN or FLASH_ATTN.")
 
 

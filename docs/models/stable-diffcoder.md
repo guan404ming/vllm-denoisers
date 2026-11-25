@@ -10,9 +10,7 @@ organization: ByteDance-Seed
 ## Serve
 
 ```bash
-vllm serve ByteDance-Seed/Stable-DiffCoder-8B-Instruct \
-  --attention-backend TRITON_ATTN --block-size 16 \
-  --generation-config vllm
+vllm serve ByteDance-Seed/Stable-DiffCoder-8B-Instruct
 ```
 
 ## Decoding

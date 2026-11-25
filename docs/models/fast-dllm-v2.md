@@ -11,8 +11,7 @@ organization: Efficient-Large-Model
 
 ```bash
 vllm serve Efficient-Large-Model/Fast_dLLM_v2_7B \
-  --attention-backend TRITON_ATTN --block-size 32 \
-  --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 --generation-config vllm
+  --max-model-len 2048 --generation-config vllm
 ```
 
 ## Decoding

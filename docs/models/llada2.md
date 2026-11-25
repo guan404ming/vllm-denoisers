@@ -10,17 +10,13 @@ organization: inclusionAI
 ## Serve
 
 ```bash
-vllm serve inclusionAI/LLaDA2.0-mini \
-  --attention-backend TRITON_ATTN --block-size 32 \
-  --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 \
-  --generation-config vllm
+vllm serve inclusionAI/LLaDA2.0-mini --max-model-len 2048 --generation-config vllm
 ```
 
 ## Image input
 
 ```bash
 vllm serve inclusionAI/LLaDA2.0-Uni \
-  --attention-backend TRITON_ATTN --block-size 32 \
   --max-model-len 8192 --max-num-seqs 4 --max-num-batched-tokens 8192 --generation-config vllm
 ```
 

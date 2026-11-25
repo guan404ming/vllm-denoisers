@@ -11,8 +11,7 @@ organization: GSAI-ML
 
 ```bash
 vllm serve GSAI-ML/LLaDA-8B-Instruct \
-  --attention-backend TRITON_ATTN --no-enable-prefix-caching \
-  --max-model-len 2048 --max-num-seqs 8 --max-num-batched-tokens 2048 --generation-config vllm
+  --no-enable-prefix-caching --max-model-len 2048
 ```
 
 ## Decoding

@@ -10,8 +10,7 @@ organization: google
 ## Serve
 
 ```bash
-VLLM_PLUGINS=denoisers vllm serve google/diffusiongemma-26B-A4B-it \
-  --attention-backend TRITON_ATTN --max-num-seqs 8 --max-num-batched-tokens 4096
+vllm serve google/diffusiongemma-26B-A4B-it --max-num-batched-tokens 4096
 ```
 
 ## Decoding
