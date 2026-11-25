@@ -67,6 +67,15 @@ def test_sequences_fit_the_batch_token_budget():
         verify_block_diffusion(config, hf_config, "test")
 
 
+def test_resact_keeps_its_resident_count():
+    config, hf_config = make_config()
+    scheduler = config.scheduler_config
+    scheduler.scheduler_cls = "resact"
+    scheduler.max_num_batched_tokens, scheduler.max_num_seqs = 5 * BLOCK, 1024
+    verify_block_diffusion(config, hf_config, "test")
+    assert scheduler.max_num_seqs == 1024
+
+
 @pytest.mark.parametrize(
     ("policy", "version", "window", "expected"),
     [

@@ -130,3 +130,18 @@ def test_mean_entropy_counts_only_selected_positions():
     values = entropy(logits)
     assert math.isclose(mean_entropy(values, counted).item(), math.log(16), rel_tol=1e-5)
     assert mean_entropy(values, torch.ones(1, 4, dtype=torch.bool)).item() < math.log(16)
+
+
+def test_entropy_of_masked_rows_gives_the_dense_mean():
+    logits = torch.randn(2, 6, 16)
+    canvas = torch.full((2, 6), MASK)
+    canvas[0, :4] = 1
+    canvas[1, 2] = 1
+    logits[canvas != MASK] = 0
+    logits[canvas != MASK, 1] = 60.0
+    masked = canvas == MASK
+    counted = torch.ones(2, 6, dtype=torch.bool)
+    dense = row_stats(logits, MASK).entropy
+    sparse = row_stats(logits, MASK, active=masked).entropy
+    assert (sparse[~masked] == 0).all()
+    assert torch.allclose(mean_entropy(dense, counted), mean_entropy(sparse, counted), atol=1e-5)

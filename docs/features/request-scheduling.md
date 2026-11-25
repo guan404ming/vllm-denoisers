@@ -28,7 +28,7 @@ DENOISERS_ACTIVE=16 vllm serve inclusionAI/LLaDA2.0-mini \
   --max-model-len 2048 --generation-config vllm
 ```
 
-This example keeps up to 32 requests resident and advances 16 on each step. `DENOISERS_RESERVE` (default 0.125) gives that share of the steps to the oldest requests. Prefill chunks align with the canvas. For synchronous scheduling, add `--no-async-scheduling`.
+This example keeps up to 32 requests resident and advances 16 on each step. `DENOISERS_RESERVE` (default 0.125) gives that share of the steps to the oldest requests. Prefill chunks align with the canvas. For synchronous scheduling, add `--no-async-scheduling`. Keep `--max-num-batched-tokens` above `DENOISERS_ACTIVE × canvas_length`, so that new requests can prefill while the active requests decode.
 
 ## Hold policies
 

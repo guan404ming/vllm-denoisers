@@ -8,6 +8,7 @@ from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from denoisers.models.common.config import DecodeConfig
 from denoisers.policies import decode, feedback, kv
 from denoisers.scheduler import select_scheduler
+from denoisers.scheduler.scores import uses_probe
 
 logger = init_logger("vllm.denoisers")
 
@@ -33,12 +34,6 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
     if vllm_config.diffusion_config.canvas_length != hf_config.canvas_length:
         raise ValueError(f"{name} needs canvas_length {hf_config.canvas_length}.")
     scheduler = vllm_config.scheduler_config
-    fit = scheduler.max_num_batched_tokens // hf_config.canvas_length
-    if not fit:
-        raise ValueError(f"{name} needs max_num_batched_tokens >= canvas_length.")
-    if fit < scheduler.max_num_seqs:
-        logger.info("%s: max_num_seqs %d -> %d to fit the batch", name, scheduler.max_num_seqs, fit)
-        scheduler.max_num_seqs = fit
     if vllm_config.parallel_config.pipeline_parallel_size > 1:
         raise ValueError(f"{name} does not support pipeline parallelism.")
     if vllm_config.parallel_config.enable_batch_sharded_sampling:
@@ -56,6 +51,12 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
             f"that is a multiple of canvas_length {canvas}."
         )
     select_scheduler(scheduler, align_prefill=aligned and scheduler.enable_chunked_prefill)
+    fit = scheduler.max_num_batched_tokens // canvas
+    if not fit:
+        raise ValueError(f"{name} needs max_num_batched_tokens >= canvas_length.")
+    if fit < scheduler.max_num_seqs and not uses_probe(scheduler):
+        logger.info("%s: max_num_seqs %d -> %d to fit the batch", name, scheduler.max_num_seqs, fit)
+        scheduler.max_num_seqs = fit
     if getattr(hf_config, "feedback_policy", None) is not None:
         feedback.registry.resolve(hf_config.feedback_policy)
     if getattr(hf_config, "kv_policy", None) is not None:
