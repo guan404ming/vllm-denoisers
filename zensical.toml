@@ -26,7 +26,7 @@ nav = [
     ] },
     { "User guide" = [
         { "Overview" = "user-guide.md" },
-        { "Concepts" = ["concepts/block-decoding.md"] },
+        { "Concepts" = ["concepts/block-decoding.md", "concepts/denoising-step.md"] },
         { "Features" = [
             "features/decode-policies.md",
             "features/kv-cache-reuse.md",

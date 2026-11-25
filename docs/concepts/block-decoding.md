@@ -20,4 +20,4 @@ While the block is in progress, the sampler reports zero output tokens to vLLM. 
 
 [![The sampler reports zero output tokens during denoising and two tokens, A and B, at commit.](../assets/block-output.svg){ width="100%" }](../assets/block-output.svg)
 
-[Decode policies](../features/decode-policies.md) · [Runtime architecture](../architecture.md)
+[Denoising step](denoising-step.md) · [Decode policies](../features/decode-policies.md) · [Runtime architecture](../architecture.md)

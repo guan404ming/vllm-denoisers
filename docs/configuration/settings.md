@@ -10,7 +10,7 @@ Pass these flags to `vllm serve`.
 | --- | --- |
 | `--scheduler-cls` | `aligned`, `resact`, or a class path. Omit it for automatic selection. See [Request scheduling](../features/request-scheduling.md). |
 | `--attention-backend` | `TRITON_ATTN` (default) or `FLASH_ATTN`. See [Installation](../installation.md#choose-an-attention-backend). |
-| `--max-num-batched-tokens` | Batch token budget for one step. See [Concurrency and batch limits](batch-limits.md). |
+| `--max-num-batched-tokens` | Batch token budget for one step. See [Batch limits](batch-limits.md). |
 | `--max-num-seqs` | Upper limit of concurrent sequences. The plugin lowers it to fit the batch token budget. With `resact`, it sets how many requests stay resident. |
 | `--max-model-len` | Longest prompt plus response. |
 | `--block-size`, `--prefix-match-unit` | For aligned policies, an explicit value must be a multiple of the canvas length. |

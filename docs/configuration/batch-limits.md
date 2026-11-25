@@ -1,4 +1,4 @@
-# Concurrency and batch limits
+# Batch limits
 
 For models that use the shared token canvas, reserve one canvas per concurrent sequence.
 
