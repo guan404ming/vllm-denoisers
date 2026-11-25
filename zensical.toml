@@ -24,17 +24,17 @@ nav = [
         ] },
         { "Continuous-latent models" = ["models/nemotron-labs-sigma.md"] },
     ] },
-    { "Components" = [
-        { "Overview" = "components/index.md" },
-        "components/schedulers.md",
-        "components/decode.md",
-        "components/kv.md",
-        "components/feedback.md",
-    ] },
     { "User guide" = [
         { "Overview" = "user-guide.md" },
-        { "Core Concepts" = ["how-it-works.md", "decode-policies.md"] },
-        { "Serving" = ["serving.md", "scheduling.md", "kv-cache.md", "settings.md"] },
+        { "Concepts" = ["concepts/block-decoding.md"] },
+        { "Features" = [
+            "features/decode-policies.md",
+            "features/kv-cache-reuse.md",
+            "features/prediction-feedback.md",
+            "features/request-scheduling.md",
+            "features/output-head-quantization.md",
+        ] },
+        { "Configuration" = ["configuration/batch-limits.md", "configuration/settings.md"] },
     ] },
     { "Developer guide" = [
         { "Overview" = "contributor-guide.md" },

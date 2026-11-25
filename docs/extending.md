@@ -26,23 +26,58 @@ params = SamplingParams(extra_args={"decode_policy": "joint"})
 
 The runtime checks `aligned`, `causal_prefill`, `causal_commit`, and `shifted` against the model default. It logs a warning and uses the default if the requested decoder is unknown, fails to build, or requires a different attention layout.
 
+`ScoreMovePolicy` extends `DecodePolicy` with a shared scoring step.
+
+| Registered name | Class | Direct base |
+| --- | --- | --- |
+| `low_confidence` | `LowConfidence` | `ScoreMovePolicy` |
+| `llada` | `LLaDA` | `ScoreMovePolicy` |
+| `fast_dllm` | `FastDLLM` | `ScoreMovePolicy` |
+| `dream` | `Dream` | `ScoreMovePolicy` |
+| `joint` | `JointThreshold` | `DecodePolicy` |
+| `indel` | `Indel` | `DecodePolicy` |
+| `entropy_bound` | `EntropyBound` | `DecodePolicy` |
+| `nemotron_vlm` | `NemotronVLMDiffusion` | `ScoreMovePolicy` |
+| `nemotron_diffusion` | `NemotronDiffusion` | `NemotronVLMDiffusion` |
+
 ## KV policy
 
 Implement `keep(before, after)` to select positions for the next forward. Return a boolean tensor of shape `[requests, canvas_length]`. Override `prefix` and set `refreshes_prefix = True` to re-encode committed tokens before the canvas. Disable prefix caching for that policy.
 
-The built-in `window` policy uses the decoder's `focus` mask, widened by `prefix_look` and `after_look`. It refreshes the canvas when the focus moves. The `llada` and `fast_dllm` decoders expose sub-block focus. See [KV cache reuse](kv-cache.md) for refresh and async scheduling options.
+The built-in `window` policy uses the decoder's `focus` mask, widened by `prefix_look` and `after_look`. It refreshes the canvas when the focus moves. The `llada` and `fast_dllm` decoders expose sub-block focus. See [KV cache reuse](features/kv-cache-reuse.md) for refresh and async scheduling options.
+
+| Registered name | Class | Direct base |
+| --- | --- | --- |
+| `masked` | `Masked` | `KvPolicy` |
+| `window` | `Window` | `KvPolicy` |
 
 ## Feedback policy
 
 Implement `soft(logits, have, before, after)` to calculate a soft input and `condition(embeds, soft)` to combine it with token embeddings. The `have` mask identifies positions with logits. See the [smooth policy](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/feedback/smooth.py) for a weighted embedding on masked positions and the [DiffusionGemma guide](models/diffusion-gemma.md) for self-conditioning.
 
+| Registered name | Class | Direct base |
+| --- | --- | --- |
+| `smooth` | `Smooth` | `FeedbackPolicy` |
+| `self_conditioning` | `SelfConditioning` | `FeedbackPolicy` |
+
 ## Scheduler
 
 The resident/active scheduler ranks requests with a hold policy. Set `DENOISERS_HOLD` to a registered name or a class path. See [ShortestFirst](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/scheduler/hold/sjf.py) for an existing implementation.
 
+| `--scheduler-cls` | Classes (sync / async) |
+| --- | --- |
+| `aligned` | `AlignedScheduler` / `AlignedAsyncScheduler` |
+| `resact` | `DenoisersScheduler` / `DenoisersAsyncScheduler` |
+
 ### Hold policy
 
-Implement `rank(candidates, now, scores)`. Return request IDs in priority order. Each candidate contains a request ID and an arrival time. The scheduler defers requests beyond the active limit. See [Scheduling](scheduling.md) for a working server configuration.
+Implement `rank(candidates, now, scores)`. Return request IDs in priority order. Each candidate contains a request ID and an arrival time. The scheduler defers requests beyond the active limit. See [Request scheduling](features/request-scheduling.md) for a working server configuration.
+
+| Registered name | Class | Direct base |
+| --- | --- | --- |
+| `sjf` | `ShortestFirst` | `HoldPolicy` |
+| `aging` | `Aging` | `HoldPolicy` |
+| `random` | `RandomOrder` | `HoldPolicy` |
 
 ## Register a model family
 
