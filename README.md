@@ -54,12 +54,12 @@ vllm-denoisers supports these model families:
 
 ## Getting Started
 
-On Linux with Python 3.12 or later and a CUDA GPU, install vLLM 0.34 and the plugin from the repository root:
+On Linux with Python 3.12 or later and a GPU that vLLM supports, install vLLM 0.34 and the plugin:
 
 ```bash
 uv venv --python 3.12
 source .venv/bin/activate
-uv pip install -e '.[vllm]'
+uv pip install 'vllm-denoisers[vllm]'
 ```
 
 Serve LLaDA2:
