@@ -13,5 +13,5 @@
 ## Release
 
 1. Configure a [PyPI trusted publisher](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/) for `vllm-denoisers`. Use repository `guan404ming/vllm-denoisers`, workflow `release.yml`, and environment `pypi`.
-2. Set the release version with `uv version <version>` and merge `pyproject.toml` and `uv.lock` into `main`. Use a version such as `0.1.1` for a stable release or `0.1.1rc1` for a release candidate.
+2. Set the release version with `uv version <version>` and merge `pyproject.toml` and `uv.lock` into `main`. Keep MAJOR.MINOR equal to the supported vLLM version. Increase PATCH for each plugin release, for example `0.34.1`. Add a suffix such as `rc1` for a release candidate.
 3. Tag the merged commit with `v<version>` and push that tag. The workflow tests the wheel and publishes the wheel and source distribution to PyPI.

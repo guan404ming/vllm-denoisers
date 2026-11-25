@@ -1,5 +1,5 @@
 <h1 align="center">
-<sup><img src="docs/assets/denoisers.svg" width="52" height="52" align="middle" alt=""></sup> vllm-denoisers
+<sup><img src="https://raw.githubusercontent.com/guan404ming/vllm-denoisers/main/docs/assets/denoisers.svg" width="52" height="52" align="middle" alt=""></sup> vllm-denoisers
 </h1>
 
 <h3 align="center">
@@ -12,7 +12,8 @@ Serve diffusion language models through vLLM
 
 <p align="center">
 <a href="https://github.com/guan404ming/vllm-denoisers/actions/workflows/docs.yml"><img alt="Documentation CI" src="https://github.com/guan404ming/vllm-denoisers/actions/workflows/docs.yml/badge.svg?branch=main"></a>
-<a href="pyproject.toml"><img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue.svg"></a>
+<a href="https://github.com/guan404ming/vllm-denoisers/blob/main/pyproject.toml"><img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-blue.svg"></a>
+<a href="https://github.com/vllm-project/vllm/releases/tag/v0.34.0"><img alt="vLLM 0.34" src="https://img.shields.io/badge/vLLM-0.34-orange.svg"></a>
 </p>
 
 ---
@@ -24,7 +25,7 @@ vllm-denoisers is a vLLM plugin for serving diffusion language models.
 Each request refines a block of tokens over several steps, then emits the completed tokens through vLLM’s OpenAI-compatible API.
 
 <p align="center">
-  <img src="docs/assets/architecture.svg" width="75%" alt="vLLM schedules each denoising step. Both model families share a sampler that holds unfinished blocks and emits tokens from completed blocks.">
+  <img src="https://raw.githubusercontent.com/guan404ming/vllm-denoisers/main/docs/assets/architecture.svg" width="75%" alt="vLLM schedules each denoising step. Both model families share a sampler that holds unfinished blocks and emits tokens from completed blocks.">
 </p>
 
 vllm-denoisers is efficient with:
@@ -50,14 +51,12 @@ vllm-denoisers supports these model families:
 
 ## Getting Started
 
-On Linux with Python 3.12 or later and a CUDA GPU, install the compatible vLLM build and the plugin from the repository root:
+On Linux with Python 3.12 or later and a CUDA GPU, install vLLM 0.34 and the plugin from the repository root:
 
 ```bash
 uv venv --python 3.12
 source .venv/bin/activate
-uv pip install 'vllm==0.33.0rc1.dev487+g5689c2790' \
-  --extra-index-url https://wheels.vllm.ai/5689c2790c911a55c75825aac5166305df0b591d/
-uv pip install -e .
+uv pip install -e '.[vllm]'
 ```
 
 Serve LLaDA2:
@@ -75,6 +74,15 @@ Visit our [documentation](https://guan404ming.github.io/vllm-denoisers/) to lear
 - [Quick Start](https://guan404ming.github.io/vllm-denoisers/quickstart/)
 - [Serving Settings](https://guan404ming.github.io/vllm-denoisers/serving/)
 - [Benchmarking](https://guan404ming.github.io/vllm-denoisers/benchmarking/)
+
+## Versioning
+
+Follows [Semantic Versioning](https://semver.org/) with upstream tracking:
+
+- MAJOR.MINOR: Tracks upstream [vLLM](https://github.com/vllm-project/vllm)
+- PATCH: vllm-denoisers specific releases
+
+Example: `0.34.2` = vLLM 0.34 + 2 vllm-denoisers patch releases
 
 ## Contributing
 

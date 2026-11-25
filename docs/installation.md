@@ -1,6 +1,6 @@
 # Installation
 
-Use Linux, Python 3.12 or later, and a CUDA GPU with enough memory for your checkpoint. The plugin uses vLLM worker interfaces that change between builds. The commands below select revision `5689c2790` and the Triton attention backend.
+Use Linux, Python 3.12 or later, and a CUDA GPU with enough memory for your checkpoint. The plugin uses vLLM worker interfaces that change between releases. Each plugin release supports one vLLM minor version. The command below installs vLLM 0.34.
 
 ## Install vLLM and the plugin
 
@@ -9,12 +9,10 @@ Run these commands from the root of this repository. Keep the environment active
 ```bash
 uv venv --python 3.12
 source .venv/bin/activate
-uv pip install 'vllm==0.33.0rc1.dev487+g5689c2790' \
-  --extra-index-url https://wheels.vllm.ai/5689c2790c911a55c75825aac5166305df0b591d/
-uv pip install -e .
+uv pip install -e '.[vllm]'
 ```
 
-If you already have a compatible vLLM installation, run the last command in that environment. For driver and CUDA requirements, see the [vLLM GPU installation guide](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/).
+If you already have vLLM 0.34 installed, run `uv pip install -e .` in that environment. For driver and CUDA requirements, see the [vLLM GPU installation guide](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/).
 
 ## Check plugin discovery
 
