@@ -1,6 +1,6 @@
 from transformers import Qwen2Config
 
-from denoisers.models.config import DecodeConfig
+from denoisers.models.common.config import DecodeConfig
 
 
 class FastDLLMQwenConfig(DecodeConfig, Qwen2Config):

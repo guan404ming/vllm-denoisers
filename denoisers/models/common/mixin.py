@@ -3,7 +3,7 @@ from typing import Literal
 from vllm.model_executor.layers.linear import UnquantizedLinearMethod
 from vllm.model_executor.layers.vocab_parallel_embedding import UnquantizedEmbeddingMethod
 
-from denoisers.models.lm_head import LM_HEAD_METHODS, QuantizedHead
+from denoisers.ops.lm_head import LM_HEAD_METHODS, QuantizedHead
 from denoisers.policies.decode import registry
 from denoisers.runtime.model_state import BlockDiffusionModelState
 

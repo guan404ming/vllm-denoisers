@@ -1,6 +1,6 @@
 import random
 
-from denoisers.policies.hold.interface import HoldPolicy, registry
+from denoisers.scheduler.hold.interface import HoldPolicy, registry
 
 
 @registry.register("random")

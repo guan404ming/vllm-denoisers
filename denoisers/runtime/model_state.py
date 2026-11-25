@@ -10,6 +10,7 @@ from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.worker.gpu.attn_utils import build_attn_metadata
 from vllm.v1.worker.gpu.model_states.interface import ModelState
 
+from denoisers import probe
 from denoisers.canvas.state import CanvasState
 from denoisers.policies import inputs, kv
 from denoisers.runtime.batch import (
@@ -21,7 +22,6 @@ from denoisers.runtime.batch import (
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime
 from denoisers.runtime.sampler import BlockDiffusionSampler
-from denoisers.scheduler import probe
 
 
 def ranged(backend, policy, model) -> bool:

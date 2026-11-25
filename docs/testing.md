@@ -30,8 +30,6 @@ Run the first 100 test questions through vLLM and the first 30 through the refer
 
 Give vLLM accuracy on all 100, accuracy for each implementation on the paired 30, and the exact token match count for the parity test.
 
-The optional [LLaDA2 evaluation script](https://github.com/guan404ming/vllm-denoisers/blob/main/tests/llada2_eval.py) automates these checks on Modal. It requires a Modal account and a configured Hugging Face secret.
-
 ## Check a vLLM upgrade
 
-Verify model registration, attention metadata, the FlashAttention backend, the custom sampler, and the draft token hook against the new worker interfaces. Run a GPU smoke request for each affected family. For DiffusionGemma, also run `uv run pytest -q tests/test_entropy_bound.py` with CUDA available. See the [runtime architecture](architecture.md) for the integration points.
+Verify model registration, attention metadata, the FlashAttention backend, the custom sampler, and the draft token hook against the new worker interfaces. Run a GPU smoke request for each affected family. For DiffusionGemma, also run `uv run pytest -q tests/policies/test_entropy_bound.py` with CUDA available. See the [runtime architecture](architecture.md) for the integration points.

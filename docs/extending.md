@@ -7,7 +7,7 @@ Each policy registry accepts a short name or an importable class path in the ser
 | Decode | `decode_policy` | [LowConfidence](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/decode/low_confidence.py) |
 | KV | `kv_policy` | [Window](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/kv/window.py) |
 | Input | `input_policy` | [SelfConditioning](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/inputs/self_conditioning.py) |
-| Hold | `DENOISERS_HOLD` | [ShortestFirst](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/hold/sjf.py) |
+| Hold | `DENOISERS_HOLD` | [ShortestFirst](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/scheduler/hold/sjf.py) |
 
 ## Decode policy
 

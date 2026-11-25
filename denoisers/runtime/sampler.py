@@ -17,10 +17,10 @@ from denoisers.hooks import draft_tokens
 from denoisers.ops.sampling import exclude_filtered_mask
 from denoisers.ops.stats import row_stats
 from denoisers.policies.inputs import InputPolicy
+from denoisers.probe import Probe
 from denoisers.runtime.batch import finished_prefills, query_lens
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime, inverse_index
-from denoisers.scheduler.probe import Probe
 
 logger = init_logger("vllm.denoisers")
 

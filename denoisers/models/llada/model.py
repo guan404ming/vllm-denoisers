@@ -3,7 +3,7 @@ import re
 from vllm.model_executor.models.llama import LlamaForCausalLM
 from vllm.model_executor.models.utils import WeightsMapper
 
-from denoisers.models.mixin import BlockDiffusionModel
+from denoisers.models.common.mixin import BlockDiffusionModel
 
 
 class LLaDAModelLM(BlockDiffusionModel, LlamaForCausalLM):

@@ -1,6 +1,6 @@
 from transformers import LlamaConfig, Mistral3Config, PreTrainedTokenizerFast
 
-from denoisers.models.config import DecodeConfig
+from denoisers.models.common.config import DecodeConfig
 
 
 class NemotronLabsDiffusionConfig(DecodeConfig, LlamaConfig):

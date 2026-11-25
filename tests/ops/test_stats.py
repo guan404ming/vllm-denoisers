@@ -3,6 +3,7 @@ import math
 import pytest
 import torch
 
+from denoisers import probe
 from denoisers.ops.stats import (
     _nucleus_reference,
     _reference,
@@ -10,7 +11,6 @@ from denoisers.ops.stats import (
     row_stats,
     sample_stats,
 )
-from denoisers.scheduler import probe
 
 MASK, DELETE, SPLIT = 9, 7, 8
 

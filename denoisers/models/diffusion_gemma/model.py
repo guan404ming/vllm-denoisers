@@ -5,8 +5,8 @@ from vllm.model_executor.models.diffusion_gemma import (
 )
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
-from denoisers.models.mixin import BlockDiffusionModel
-from denoisers.models.verify import verify_block_diffusion
+from denoisers.models.common.mixin import BlockDiffusionModel
+from denoisers.models.common.verify import verify_block_diffusion
 from denoisers.ops.sampling import given
 
 GENERATION_FIELDS = ("t_min", "t_max", "confidence_threshold", "stability_threshold")

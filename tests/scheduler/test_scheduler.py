@@ -3,8 +3,8 @@ import math
 import pytest
 import torch
 
-from denoisers.policies.hold import Aging, ShortestFirst
-from denoisers.scheduler import probe
+from denoisers import probe
+from denoisers.scheduler.hold import Aging, ShortestFirst
 from denoisers.scheduler.remaining import RemainingWork
 
 

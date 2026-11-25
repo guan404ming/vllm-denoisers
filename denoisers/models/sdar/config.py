@@ -1,6 +1,6 @@
 from transformers import Qwen3Config, Qwen3MoeConfig
 
-from denoisers.models.config import DecodeConfig
+from denoisers.models.common.config import DecodeConfig
 
 
 class SDARDecodeConfig(DecodeConfig):
