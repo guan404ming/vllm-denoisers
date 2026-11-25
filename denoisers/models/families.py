@@ -2,6 +2,7 @@ from transformers import AutoConfig, AutoTokenizer
 from vllm import ModelRegistry
 from vllm.model_executor.models.config import MODELS_CONFIG_MAP
 
+from denoisers.models.common.verify import BlockDiffusionModelConfig
 from denoisers.models.diffusion_gemma.model import DiffusionGemmaForBlockDiffusionConfig
 from denoisers.models.dream.config import DreamConfig
 from denoisers.models.dream.tokenizer import DreamTokenizer
@@ -17,7 +18,6 @@ from denoisers.models.nemotron_diffusion.config import (
 from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
 from denoisers.models.sigma.config import SigmaModelConfig
 from denoisers.models.stable_diffcoder.model import StableDiffcoderModelConfig
-from denoisers.models.verify import BlockDiffusionModelConfig
 
 FAMILIES = (
     ("LLaDA2MoeModelLM", "llada2.model:LLaDA2MoeModelLM", LLaDA2MoeConfig, CustomFastTokenizer),

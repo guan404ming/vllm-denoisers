@@ -9,10 +9,10 @@ from vllm.v1.attention.backend import AttentionType
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
 
-from denoisers.models.verify import verify_block_diffusion
+from denoisers.models.common.verify import verify_block_diffusion
+from denoisers.probe import uses_probe
 from denoisers.runtime.model_state import ranged
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
-from denoisers.scheduler.probe import uses_probe
 from denoisers.scheduler.resident_active import (
     DenoisersAsyncScheduler,
     DenoisersScheduler,

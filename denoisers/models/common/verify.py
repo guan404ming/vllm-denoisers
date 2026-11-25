@@ -2,7 +2,7 @@ from vllm.config.diffusion import DiffusionConfig
 from vllm.model_executor.models.config import VerifyAndUpdateConfig
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 
-from denoisers.models.config import DecodeConfig
+from denoisers.models.common.config import DecodeConfig
 from denoisers.policies import decode, inputs, kv
 from denoisers.scheduler import select_scheduler
 

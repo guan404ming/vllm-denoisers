@@ -14,9 +14,9 @@ from vllm.multimodal.processing import (
     PromptUpdateDetails,
 )
 
-from denoisers.models.image import ImageDummyInputs, ImageProcessingInfo
+from denoisers.models.common.image import ImageDummyInputs, ImageProcessingInfo
+from denoisers.models.common.mixin import BlockDiffusionModel
 from denoisers.models.llada2.model import LLaDA2MoeModelLM
-from denoisers.models.mixin import BlockDiffusionModel
 
 IMAGE_START = "<|image|>"
 

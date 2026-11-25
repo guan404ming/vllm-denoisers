@@ -7,9 +7,9 @@ from vllm.logger import init_logger
 from vllm.v1.core.sched.diffusion_scheduler import diffusion_canvas_width
 from vllm.v1.request import RequestStatus
 
-from denoisers.policies.hold import registry
-from denoisers.scheduler import probe
+from denoisers import probe
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
+from denoisers.scheduler.hold import registry
 from denoisers.scheduler.remaining import RemainingWork
 
 logger = init_logger("vllm.denoisers")

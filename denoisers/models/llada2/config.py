@@ -1,6 +1,6 @@
 from transformers import PretrainedConfig
 
-from denoisers.models.config import DecodeConfig
+from denoisers.models.common.config import DecodeConfig
 
 
 class LLaDA2MoeConfig(DecodeConfig, PretrainedConfig):

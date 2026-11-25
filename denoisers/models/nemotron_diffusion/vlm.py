@@ -12,8 +12,8 @@ from vllm.multimodal.processing import (
     PromptUpdateDetails,
 )
 
-from denoisers.models.image import ImageDummyInputs, ImageProcessingInfo
-from denoisers.models.mixin import BlockDiffusionModel
+from denoisers.models.common.image import ImageDummyInputs, ImageProcessingInfo
+from denoisers.models.common.mixin import BlockDiffusionModel
 
 IMAGE_START = "<|image_start|>"
 IMAGE_IDS = SpecialImageIDs(img=19, img_break=20, img_end=21)

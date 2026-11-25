@@ -1,4 +1,4 @@
-from denoisers.policies.hold.interface import PRIOR, HoldPolicy, registry
+from denoisers.scheduler.hold.interface import PRIOR, HoldPolicy, registry
 
 
 @registry.register("sjf")

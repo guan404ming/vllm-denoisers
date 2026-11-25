@@ -1,7 +1,7 @@
 from vllm.model_executor.models.mistral import MistralForCausalLM
 from vllm.model_executor.models.utils import WeightsMapper
 
-from denoisers.models.mixin import BlockDiffusionModel
+from denoisers.models.common.mixin import BlockDiffusionModel
 
 
 class NemotronLabsDiffusionModel(BlockDiffusionModel, MistralForCausalLM):

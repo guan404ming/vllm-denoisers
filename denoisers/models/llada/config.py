@@ -1,6 +1,6 @@
 from transformers import LlamaConfig
 
-from denoisers.models.config import DecodeConfig
+from denoisers.models.common.config import DecodeConfig
 
 
 class LLaDAConfig(DecodeConfig, LlamaConfig):

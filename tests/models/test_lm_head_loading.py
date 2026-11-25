@@ -9,7 +9,7 @@ from vllm.config import VllmConfig, set_current_vllm_config
 from vllm.model_executor.layers.logits_processor import LogitsProcessor
 from vllm.model_executor.layers.vocab_parallel_embedding import ParallelLMHead
 
-from denoisers.models.mixin import BlockDiffusionModel
+from denoisers.models.common.mixin import BlockDiffusionModel
 
 
 class HeadLoader:

@@ -4,8 +4,8 @@ from vllm.model_executor.layers.fused_moe.router.custom_routing_router import (
 )
 from vllm.model_executor.models.bailing_moe import BailingMoE, BailingMoeV2ForCausalLM
 
+from denoisers.models.common.mixin import BlockDiffusionModel
 from denoisers.models.llada2.routing import BlockRouter
-from denoisers.models.mixin import BlockDiffusionModel
 
 
 class FP32RouterMoE(BailingMoE):

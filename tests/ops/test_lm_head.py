@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from denoisers.models.lm_head import LM_HEAD_METHODS, Int4Head
+from denoisers.ops.lm_head import LM_HEAD_METHODS, Int4Head
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
