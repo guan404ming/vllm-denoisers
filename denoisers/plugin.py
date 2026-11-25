@@ -7,6 +7,6 @@ from denoisers.models import families
 def register() -> None:
     hooks.apply()
     register_backend(
-        AttentionBackendEnum.FLASH_ATTN, "denoisers.attention.RangedFlashAttentionBackend"
+        AttentionBackendEnum.FLASH_ATTN, "denoisers.runtime.attention.RangedFlashAttentionBackend"
     )
     families.register_all()

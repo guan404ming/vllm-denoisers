@@ -1,6 +1,6 @@
 from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
 
-from denoisers.runtime.batch import aligned_prefill_chunk
+from denoisers.scheduler import aligned_prefill_chunk
 
 
 class AlignedScheduler(DiffusionScheduler):

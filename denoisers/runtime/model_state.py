@@ -10,7 +10,6 @@ from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.worker.gpu.attn_utils import build_attn_metadata
 from vllm.v1.worker.gpu.model_states.interface import ModelState
 
-from denoisers import probe
 from denoisers.canvas.state import CanvasState
 from denoisers.policies import feedback, kv
 from denoisers.runtime.batch import (
@@ -22,6 +21,7 @@ from denoisers.runtime.batch import (
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime
 from denoisers.runtime.sampler import BlockDiffusionSampler
+from denoisers.scheduler import scores
 
 
 def ranged(backend, policy, model) -> bool:
@@ -47,9 +47,9 @@ class BlockDiffusionModelState(ModelState):
         super().__init__(vllm_config, model, encoder_cache, device)
         hf_config = self.model_config.hf_config
         policy = model.build_policy()
-        policy.dense_scores = probe.uses_probe(vllm_config.scheduler_config)
+        policy.dense_scores = scores.uses_probe(vllm_config.scheduler_config)
         self.probe = (
-            probe.start(vllm_config)
+            scores.start(vllm_config)
             if policy.dense_scores and get_tensor_model_parallel_rank() == 0
             else None
         )

@@ -33,10 +33,3 @@ def prefill_block_ranges(seq_len: int, block_length: int) -> list[tuple[int, int
 
 def free_ranges(ranges: dict, prefilling: np.ndarray) -> dict:
     return ranges | {int(row): [FREE] for row in np.flatnonzero(~prefilling)}
-
-
-def aligned_prefill_chunk(start: int, num_new: int, prompt_len: int, block: int) -> int:
-    end = start + num_new
-    if end >= prompt_len:
-        return num_new
-    return max(end - end % block - start, 0)

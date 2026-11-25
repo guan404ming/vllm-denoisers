@@ -3,25 +3,26 @@ import math
 import pytest
 import torch
 
-from denoisers import probe
+from denoisers.scheduler import aligned_prefill_chunk
 from denoisers.scheduler.hold import Aging, ShortestFirst
 from denoisers.scheduler.remaining import RemainingWork
+from denoisers.scheduler.scores import Probe, ScoreTable
 
 
-def test_mean_entropy_counts_only_selected_positions():
-    logits = torch.zeros(1, 4, 16)
-    logits[0, 2, 0] = 50.0
-    counted = torch.tensor([[True, True, False, True]])
-    entropy = probe.entropy(logits)
-    assert math.isclose(probe.mean_entropy(entropy, counted).item(), math.log(16), rel_tol=1e-5)
-    assert probe.mean_entropy(entropy, torch.ones(1, 4, dtype=torch.bool)).item() < math.log(16)
+def test_aligned_prefill_chunk():
+    assert aligned_prefill_chunk(0, 48, 100, 32) == 32
+    assert aligned_prefill_chunk(32, 48, 100, 32) == 32
+    assert aligned_prefill_chunk(64, 48, 100, 32) == 48
+    assert aligned_prefill_chunk(0, 20, 100, 32) == 0
+    assert aligned_prefill_chunk(96, 4, 100, 32) == 4
+    assert aligned_prefill_chunk(100, 32, 100, 32) == 32
 
 
 def test_score_table_crosses_processes_and_drops_committing_rows(tmp_path):
     path = str(tmp_path / "scores")
-    reader = probe.ScoreTable(path, 4)
+    reader = ScoreTable(path, 4)
     assert reader.read(["a"]) == {}
-    writer = probe.Probe(probe.ScoreTable(path, 4, create=True))
+    writer = Probe(ScoreTable(path, 4, create=True))
     idle = torch.tensor([False])
     writer.record(
         [2, 0],
@@ -64,8 +65,8 @@ def test_reserve_runs_the_oldest_held_requests():
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU")
 def test_probe_waits_for_scores_on_the_copy_stream(tmp_path):
-    table = probe.ScoreTable(str(tmp_path / "scores"), 1, create=True)
-    writer = probe.Probe(table)
+    table = ScoreTable(str(tmp_path / "scores"), 1, create=True)
+    writer = Probe(table)
     stream = torch.cuda.Stream()
     with torch.cuda.stream(stream):
         scores = torch.tensor([2.0], device="cuda")

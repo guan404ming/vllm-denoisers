@@ -4,6 +4,13 @@ _BUILTINS = {
 }
 
 
+def aligned_prefill_chunk(start: int, num_new: int, prompt_len: int, block: int) -> int:
+    end = start + num_new
+    if end >= prompt_len:
+        return num_new
+    return max(end - end % block - start, 0)
+
+
 def select_scheduler(scheduler, *, align_prefill=False):
     name = scheduler.scheduler_cls
     if name is None and align_prefill:

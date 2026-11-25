@@ -54,16 +54,6 @@ class ScoreTable:
             os.remove(self.path)
 
 
-def entropy(logits: torch.Tensor) -> torch.Tensor:
-    log_probs = torch.log_softmax(logits.float(), dim=-1).clamp(min=-1e4)
-    return -(log_probs.exp() * log_probs).sum(dim=-1)
-
-
-def mean_entropy(entropy: torch.Tensor, counted: torch.Tensor) -> torch.Tensor:
-    weight = counted.float()
-    return (entropy * weight).sum(dim=1) / weight.sum(dim=1).clamp(min=1)
-
-
 class Probe:
     def __init__(self, table: ScoreTable):
         self.table = table

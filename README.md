@@ -36,6 +36,7 @@ vllm-denoisers is efficient with:
 
 - Denoising steps batched and scheduled by vLLM
 - KV cache reuse between full passes
+- A specialized FlashAttention 4 backend for block-aligned masking
 - Resident/active scheduling by expected remaining steps
 - FP8 and INT4 output-head quantization
 - Tensor parallelism for token-canvas models

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import torch
 
 from denoisers.canvas.rows import CanvasRows
-from denoisers.registry import Registry
+from denoisers.utils.registry import Registry
 
 
 class KvPolicy(ABC):

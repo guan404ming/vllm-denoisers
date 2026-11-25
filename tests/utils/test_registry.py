@@ -3,7 +3,7 @@ import pytest
 from denoisers.models.dream.config import DreamConfig
 from denoisers.models.fast_dllm.config import FastDLLMQwenConfig
 from denoisers.policies.decode import DecodePolicy, LowConfidence
-from denoisers.registry import Registry
+from denoisers.utils.registry import Registry
 
 
 def test_registry_registers_subclasses_and_resolves_qualified_names():
