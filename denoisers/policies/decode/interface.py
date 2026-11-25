@@ -7,7 +7,7 @@ import torch
 from denoisers.canvas.rows import CanvasRows, StepResult
 from denoisers.ops.sampling import draws, shift_rows
 from denoisers.ops.stats import mean_entropy
-from denoisers.registry import Registry
+from denoisers.utils.registry import Registry
 
 
 class DecodePolicy(ABC):

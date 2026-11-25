@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from denoisers.registry import Registry
+from denoisers.utils.registry import Registry
 
 PRIOR = 0.0
 
