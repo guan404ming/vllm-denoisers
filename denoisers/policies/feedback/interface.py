@@ -6,12 +6,12 @@ from denoisers.canvas.rows import CanvasRows
 from denoisers.registry import Registry
 
 
-class InputPolicy(ABC):
+class FeedbackPolicy(ABC):
     hidden_size: int
 
     @classmethod
     @abstractmethod
-    def from_config(cls, config, model) -> "InputPolicy":
+    def from_config(cls, config, model) -> "FeedbackPolicy":
         raise NotImplementedError
 
     @abstractmethod
@@ -25,4 +25,4 @@ class InputPolicy(ABC):
         raise NotImplementedError
 
 
-registry = Registry("input policy", InputPolicy)
+registry = Registry("feedback policy", FeedbackPolicy)

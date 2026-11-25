@@ -12,7 +12,7 @@ from vllm.v1.worker.gpu.model_states.interface import ModelState
 
 from denoisers import probe
 from denoisers.canvas.state import CanvasState
-from denoisers.policies import inputs, kv
+from denoisers.policies import feedback, kv
 from denoisers.runtime.batch import (
     finished_prefills,
     free_ranges,
@@ -57,11 +57,11 @@ class BlockDiffusionModelState(ModelState):
         self.causal_commit = policy.causal_commit
         self.causal_prefill = policy.causal_prefill
         self.ranged = ranged(vllm_config.attention_config.backend, policy, model)
-        name = getattr(hf_config, "input_policy", None)
-        self.inputs = None
+        name = getattr(hf_config, "feedback_policy", None)
+        self.feedback = None
         if name is not None:
-            self.inputs = inputs.registry.resolve(name).from_config(hf_config, model)
-        hidden_size = None if self.inputs is None else self.inputs.hidden_size
+            self.feedback = feedback.registry.resolve(name).from_config(hf_config, model)
+        hidden_size = None if self.feedback is None else self.feedback.hidden_size
         self.state = CanvasState(
             self.max_num_reqs,
             hf_config.canvas_length,
@@ -118,7 +118,7 @@ class BlockDiffusionModelState(ModelState):
             self.model.compute_logits,
             self.model_config.get_vocab_size(),
             kv=self.kv,
-            inputs=self.inputs,
+            feedback=self.feedback,
             probe=self.probe,
             prefix_caching=self.vllm_config.cache_config.enable_prefix_caching,
         ), None
@@ -191,7 +191,7 @@ class BlockDiffusionModelState(ModelState):
                     input_ids, multimodal_embeddings=mm_embeds, is_multimodal=is_mm_embed
                 )
             )
-        if self.inputs is None or input_batch.num_draft_tokens == 0:
+        if self.feedback is None or input_batch.num_draft_tokens == 0:
             return embeds
         num_reqs = input_batch.num_reqs
         num_logits = np.diff(input_batch.cu_num_logits_np[: num_reqs + 1])
@@ -210,7 +210,7 @@ class BlockDiffusionModelState(ModelState):
         soft = (soft * (cells >= 0).unsqueeze(2)).view(-1, hidden)
         index = async_tensor_h2d(index, device=self.device)
         flat = async_tensor_h2d(flat, device=self.device)
-        embeds[index] = self.inputs.condition(embeds[index], soft[flat].to(embeds.dtype))
+        embeds[index] = self.feedback.condition(embeds[index], soft[flat].to(embeds.dtype))
         return embeds
 
     def prepare_inputs(self, input_batch, req_states) -> dict[str, Any]:

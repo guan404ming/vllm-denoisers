@@ -6,7 +6,7 @@ Each policy registry accepts a short name or an importable class path in the ser
 | --- | --- | --- |
 | Decode | `decode_policy` | [LowConfidence](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/decode/low_confidence.py) |
 | KV | `kv_policy` | [Window](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/kv/window.py) |
-| Input | `input_policy` | [SelfConditioning](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/inputs/self_conditioning.py) |
+| Feedback | `feedback_policy` | [SelfConditioning](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/feedback/self_conditioning.py) |
 
 ## Decode policy
 
@@ -32,9 +32,9 @@ Implement `keep(before, after)` to select positions for the next forward. Return
 
 The built-in `window` policy uses the decoder's `focus` mask, widened by `prefix_look` and `after_look`. It refreshes the canvas when the focus moves. The `llada` and `fast_dllm` decoders expose sub-block focus. See [KV cache reuse](kv-cache.md) for refresh and async scheduling options.
 
-## Input policy
+## Feedback policy
 
-Implement `soft(logits, have, before, after)` to calculate a soft input and `condition(embeds, soft)` to combine it with token embeddings. The `have` mask identifies positions with logits. See the [smooth policy](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/inputs/smooth.py) for a weighted embedding on masked positions and the [DiffusionGemma guide](models/diffusion-gemma.md) for self-conditioning.
+Implement `soft(logits, have, before, after)` to calculate a soft input and `condition(embeds, soft)` to combine it with token embeddings. The `have` mask identifies positions with logits. See the [smooth policy](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/policies/feedback/smooth.py) for a weighted embedding on masked positions and the [DiffusionGemma guide](models/diffusion-gemma.md) for self-conditioning.
 
 ## Scheduler
 

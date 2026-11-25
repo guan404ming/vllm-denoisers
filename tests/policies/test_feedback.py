@@ -4,7 +4,7 @@ import torch
 from support import make_rows
 
 from denoisers.ops.embedding import ExpectedEmbedding
-from denoisers.policies.inputs import SelfConditioning, Smooth
+from denoisers.policies.feedback import SelfConditioning, Smooth
 
 MASK = 5
 VOCAB = 6

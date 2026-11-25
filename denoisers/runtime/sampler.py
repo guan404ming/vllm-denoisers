@@ -16,7 +16,7 @@ from denoisers.canvas.transition import advance
 from denoisers.hooks import draft_tokens
 from denoisers.ops.sampling import exclude_filtered_mask
 from denoisers.ops.stats import row_stats
-from denoisers.policies.inputs import InputPolicy
+from denoisers.policies.feedback import FeedbackPolicy
 from denoisers.probe import Probe
 from denoisers.runtime.batch import finished_prefills, query_lens
 from denoisers.runtime.decoders import Decoders
@@ -81,7 +81,7 @@ class BlockDiffusionSampler(CanvasSampler):
         compute_logits,
         vocab_size,
         kv: KvRuntime | None = None,
-        inputs: InputPolicy | None = None,
+        feedback: FeedbackPolicy | None = None,
         probe: Probe | None = None,
         prefix_caching: bool = False,
     ):
@@ -98,7 +98,7 @@ class BlockDiffusionSampler(CanvasSampler):
         self._stash: dict[int, LogprobsTensors] = {}
         self.aligned = decoders.default.aligned
         self.kv = kv
-        self.inputs = inputs
+        self.feedback = feedback
         self.probe = probe
         max_num_reqs = state.canvas.shape[0]
         device = state.canvas.device
@@ -328,8 +328,8 @@ class BlockDiffusionSampler(CanvasSampler):
         after, row_sampled, row_num_sampled, entropy = advance(
             before, logits, policy, state.mask_id, remaining
         )
-        if self.inputs is not None:
-            after.soft = self.inputs.soft(logits, have, before, after)
+        if self.feedback is not None:
+            after.soft = self.feedback.soft(logits, have, before, after)
         state.scatter(slots, after)
         self._need[slots] = (after.canvas == state.mask_id).sum(1, dtype=torch.int32)
         if self.probe is not None:

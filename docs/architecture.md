@@ -19,6 +19,6 @@ The worker gathers canvas state by request slot. The decode policy returns updat
 
 [![An in-progress block reports zero output tokens. A completed block reports its generated tokens.](assets/block-output.svg){ width="100%" }](assets/block-output.svg)
 
-The KV policy can select a subset of positions for the next forward. The [draft token hook](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/hooks/draft_tokens.py) adjusts the draft width that vLLM schedules for each request. An input policy can also store a soft embedding for the next step. Both act on the same before/after canvas transition.
+The KV policy can select a subset of positions for the next forward. The [draft token hook](https://github.com/guan404ming/vllm-denoisers/blob/main/denoisers/hooks/draft_tokens.py) adjusts the draft width that vLLM schedules for each request. A feedback policy can also store a soft embedding for the next step. Both act on the same before/after canvas transition.
 
 On commit, the sampler reports the emitted token count to vLLM. Policies that do not need commit logits can skip the output-head projection when the request does not ask for logprobs.
