@@ -6,11 +6,7 @@ For models that use the shared token canvas, each concurrent sequence needs one 
 
 [![Four 32-token canvases and two 64-token canvases each require a batch budget of at least 128 tokens.](../assets/batch-token-budget.svg){ width="100%" }](../assets/batch-token-budget.svg)
 
-The plugin serves at most `max_num_batched_tokens ÷ canvas_length` sequences at a time. At startup it lowers `max_num_seqs` to that number and logs the change:
-
-```text
-DiffusionGemma: max_num_seqs 1024 -> 16 to fit the batch
-```
+The plugin serves at most `max_num_batched_tokens ÷ canvas_length` sequences at a time. At startup it lowers `max_num_seqs` to that number and logs the change, for example `max_num_seqs 1024 -> 16 to fit the batch`.
 
 To serve more sequences, raise `--max-num-batched-tokens`:
 
