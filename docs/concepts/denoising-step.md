@@ -13,4 +13,4 @@ A block needs several denoising steps, and each step is one vLLM batch. This pag
 | 5. Feedback | A feedback policy can keep the predictions of this step for the next step. | [Prediction feedback](../features/prediction-feedback.md) |
 | 6. Report | The sampler reports zero output tokens while the block is in progress. At commit, it reports the tokens of the block. | |
 
-[How block decoding works](block-decoding.md) · [Runtime architecture](../architecture.md)
+[Block decoding](block-decoding.md) · [Runtime architecture](../architecture.md)

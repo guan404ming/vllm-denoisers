@@ -2,7 +2,7 @@
 
 ## Concepts
 
-- [How block decoding works](concepts/block-decoding.md) · Follow a block of tokens from prompt prefill through denoising to output.
+- [Block decoding](concepts/block-decoding.md) · Follow a block of tokens from prompt prefill through denoising to output.
 - [Denoising step](concepts/denoising-step.md) · See what happens in one step and which feature controls each stage.
 
 ## Features

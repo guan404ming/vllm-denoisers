@@ -1,4 +1,4 @@
-# How block decoding works
+# Block decoding
 
 Each request refines one block at a time. Token-canvas models update tokens directly. Continuous-latent models refine latent states before decoding them into tokens. The example below follows a token-canvas model with four positions per block.
 
