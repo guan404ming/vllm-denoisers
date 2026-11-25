@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import torch
 from support import make_rows
@@ -5,7 +6,7 @@ from support import make_rows
 from denoisers.canvas.transition import advance, final_prefix
 from denoisers.policies.decode.llada import LLaDA
 from denoisers.policies.decode.low_confidence import LowConfidence
-from denoisers.runtime.batch import prefill_block_ranges
+from denoisers.runtime.batch import free_ranges, prefill_block_ranges
 
 MASK = 99
 BLOCK = 32
@@ -29,6 +30,13 @@ def hf_block_causal(seq_len, block):
 def test_prefill_ranges_match_hf_block_causal(seq_len):
     ranges = prefill_block_ranges(seq_len, BLOCK)
     assert torch.equal(triton_mask(seq_len, ranges), hf_block_causal(seq_len, BLOCK))
+
+
+def test_free_ranges_open_only_rows_that_finished_prefill():
+    blocks = prefill_block_ranges(40, BLOCK)
+    ranges = free_ranges({0: blocks}, np.array([True, False, True]))
+    assert ranges[0] == blocks and 2 not in ranges
+    assert triton_mask(40, ranges[1]).all()
 
 
 @pytest.mark.parametrize("shift", [0, 1, 17, 31])

@@ -5,16 +5,39 @@ import torch
 from vllm.config.compilation import CUDAGraphMode
 from vllm.distributed import get_tensor_model_parallel_rank
 from vllm.utils.torch_utils import async_tensor_h2d
+from vllm.v1.attention.backend import AttentionType
+from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.worker.gpu.attn_utils import build_attn_metadata
 from vllm.v1.worker.gpu.model_states.interface import ModelState
 
 from denoisers.canvas.state import CanvasState
 from denoisers.policies import inputs, kv
-from denoisers.runtime.batch import finished_prefills, per_token, prefill_block_ranges
+from denoisers.runtime.batch import (
+    finished_prefills,
+    free_ranges,
+    per_token,
+    prefill_block_ranges,
+)
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime
 from denoisers.runtime.sampler import BlockDiffusionSampler
 from denoisers.scheduler import probe
+
+
+def ranged(backend, policy, model) -> bool:
+    if backend != AttentionBackendEnum.FLASH_ATTN or not (policy.aligned and policy.causal_prefill):
+        return False
+    impls = [getattr(module, "impl", None) for module in model.modules()]
+    impls = [impl for impl in impls if getattr(impl, "attn_type", None) == AttentionType.DECODER]
+    if policy.causal_commit or any(
+        getattr(impl, "vllm_flash_attn_version", None) != 4 or impl.sliding_window[0] >= 0
+        for impl in impls
+    ):
+        raise ValueError(
+            "Block-aligned prefill on FLASH_ATTN needs FlashAttention 4, no sliding window, "
+            "and a bidirectional commit. Use --attention-backend TRITON_ATTN."
+        )
+    return True
 
 
 class BlockDiffusionModelState(ModelState):
@@ -33,6 +56,7 @@ class BlockDiffusionModelState(ModelState):
         self.aligned = policy.aligned
         self.causal_commit = policy.causal_commit
         self.causal_prefill = policy.causal_prefill
+        self.ranged = ranged(vllm_config.attention_config.backend, policy, model)
         name = getattr(hf_config, "input_policy", None)
         self.inputs = None
         if name is not None:
@@ -312,6 +336,7 @@ class BlockDiffusionModelState(ModelState):
             self._fill_positions(input_batch)
             self._remap_slots(input_batch, block_tables, slot_mappings, kv_cache_config)
         ranges = None if for_capture else self._doc_ranges(input_batch)
+        causal = self._causal_buf[:num_reqs]
         bound = None
         if ranges:
             bound = torch.zeros(num_reqs, dtype=torch.int32)
@@ -319,6 +344,9 @@ class BlockDiffusionModelState(ModelState):
                 input_batch.num_computed_prefill_tokens_np[:actual]
                 + np.diff(input_batch.query_start_loc_np[: actual + 1])
             )
+            if self.ranged:
+                ranges = free_ranges(ranges, input_batch.is_prefilling_np[:actual])
+                causal = True
         return build_attn_metadata(
             attn_groups=attn_groups,
             num_reqs=num_reqs,
@@ -331,7 +359,7 @@ class BlockDiffusionModelState(ModelState):
             block_tables=block_tables,
             slot_mappings=slot_mappings,
             kv_cache_config=kv_cache_config,
-            causal=self._causal_buf[:num_reqs],
+            causal=causal,
             mm_req_doc_ranges=ranges,
             seq_lens_cpu_upper_bound=bound,
         )
