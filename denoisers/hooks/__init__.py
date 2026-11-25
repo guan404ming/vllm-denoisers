@@ -1,4 +1,4 @@
-from denoisers.patches import draft_tokens
+from denoisers.hooks import draft_tokens
 
 
 def apply() -> None:
