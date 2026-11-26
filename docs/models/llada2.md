@@ -36,4 +36,4 @@ vllm serve inclusionAI/LLaDA2.0-Uni \
 
 - Mini and flash default to 32-token canvases. Tune `confidence_threshold` for unmasking and `editing_threshold` for edits.
 - Indel loop recovery resamples the lowest-confidence changed position. The reference picks one at random.
-- LLaDA2.2 requires unquantized MoE kernels and disabled expert load balancing. Its fast tokenizer supports plain text only (no reference tool rendering or long-text chunking).
+- LLaDA2.2 requires unquantized MoE kernels and disabled expert load balancing. Its tokenizer renders tools as TypeScript-style declarations and splits long text, as the reference tokenizer does.
