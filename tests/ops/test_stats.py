@@ -3,6 +3,7 @@ import math
 import pytest
 import torch
 
+from denoisers.ops import capped_stats
 from denoisers.ops.stats import (
     _nucleus_reference,
     _reference,
@@ -145,3 +146,11 @@ def test_entropy_of_masked_rows_gives_the_dense_mean():
     sparse = row_stats(logits, MASK, active=masked).entropy
     assert (sparse[~masked] == 0).all()
     assert torch.allclose(mean_entropy(dense, counted), mean_entropy(sparse, counted), atol=1e-5)
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs a GPU")
+def test_kernels_do_not_specialize_runtime_arguments():
+    kernel = capped_stats._capped_row_stats_kernel
+    assert {"probs_stride", "seed"} <= set(kernel.do_not_specialize)
+    assert "logits_ptr" in kernel.do_not_specialize_on_alignment
+    assert "SPARSE" not in kernel.do_not_specialize
