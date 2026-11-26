@@ -43,6 +43,10 @@ To turn prefix caching off, pass `--no-enable-prefix-caching`.
 
 Chunked prefill needs no setting. Aligned policies split intermediate chunks at canvas boundaries, and the final chunk can be shorter. A custom scheduler must support this alignment. If it does not, pass `--no-enable-chunked-prefill`.
 
+## CUDA graphs
+
+CUDA graphs need no setting. The plugin sets `max_decode_cudagraph_capture_requests` to `max_num_seqs`, so that full CUDA graphs cover every decode batch. If you set a capture size in `--compilation-config`, the plugin keeps your value.
+
 ## Shared runtime settings
 
 - Pass model options with `--hf-overrides`. If checkpoint defaults fail request validation, pass `--generation-config vllm`.

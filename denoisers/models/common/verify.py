@@ -13,6 +13,12 @@ from denoisers.scheduler.scores import uses_probe
 logger = init_logger("vllm.denoisers")
 
 BACKENDS = (AttentionBackendEnum.TRITON_ATTN, AttentionBackendEnum.FLASH_ATTN)
+GRAPH_SIZES = (
+    "cudagraph_capture_sizes",
+    "max_cudagraph_capture_size",
+    "decode_cudagraph_capture_request_sizes",
+    "max_decode_cudagraph_capture_requests",
+)
 
 
 def default_backend(vllm_config, policy) -> AttentionBackendEnum:
@@ -57,6 +63,9 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
     if fit < scheduler.max_num_seqs and not uses_probe(scheduler):
         logger.info("%s: max_num_seqs %d -> %d to fit the batch", name, scheduler.max_num_seqs, fit)
         scheduler.max_num_seqs = fit
+    compilation = vllm_config.compilation_config
+    if all(getattr(compilation, size) is None for size in GRAPH_SIZES):
+        compilation.max_decode_cudagraph_capture_requests = scheduler.max_num_seqs
     if getattr(hf_config, "feedback_policy", None) is not None:
         feedback.registry.resolve(hf_config.feedback_policy)
     if getattr(hf_config, "kv_policy", None) is not None:
