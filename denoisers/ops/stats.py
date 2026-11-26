@@ -30,6 +30,14 @@ def mean_entropy(entropy: torch.Tensor, counted: torch.Tensor) -> torch.Tensor:
     return (entropy * weight).sum(dim=1) / weight.sum(dim=1).clamp(min=1)
 
 
+def stable_jit(kernel):
+    code = kernel.__code__
+    runtime = [
+        name for name in code.co_varnames[: code.co_argcount] if name not in kernel.__annotations__
+    ]
+    return triton.jit(kernel, do_not_specialize=runtime, do_not_specialize_on_alignment=runtime)
+
+
 if triton is not None:
 
     @triton.jit
@@ -48,7 +56,7 @@ if triton is not None:
         ],
         key=["V"],
     )
-    @triton.jit
+    @stable_jit
     def _row_stats_kernel(
         logits_ptr,
         stride,
@@ -112,7 +120,7 @@ if triton is not None:
         tl.store(entropy_ptr + row, tl.log(total) - moment / total)
         tl.store(alt_ptr + row, alt.to(tl.int64))
 
-    @triton.jit
+    @stable_jit
     def _sample_kernel(
         logits_ptr,
         stride,
@@ -169,7 +177,7 @@ if triton is not None:
         tl.store(p0_ptr + row, tl.exp((value - m) * inv) / z)
         tl.store(plain_ptr + row, tl.exp(value - m) / z1)
 
-    @triton.jit
+    @stable_jit
     def _nucleus_kernel(
         logits_ptr,
         stride,

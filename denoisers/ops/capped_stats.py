@@ -1,5 +1,7 @@
 import torch
 
+from denoisers.ops.stats import stable_jit
+
 try:
     import triton
     import triton.language as tl
@@ -21,7 +23,7 @@ def softcap(logits: torch.Tensor, cap: float | None) -> torch.Tensor:
 
 if triton is not None:
 
-    @triton.jit
+    @stable_jit
     def _capped_row_stats_kernel(
         logits_ptr,
         logits_stride,
