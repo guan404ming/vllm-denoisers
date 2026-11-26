@@ -24,6 +24,17 @@ vllm serve inclusionAI/LLaDA2.0-Uni \
 - Send one image per request. The visual tokenizer converts image patches to discrete codes.
 - Keep the checkpoint’s `image_tokenizer/` directory when serving local weights.
 
+## Tool calling
+
+```bash
+vllm serve inclusionAI/LLaDA2.2-mini --max-model-len 4096 --generation-config vllm \
+  --enable-auto-tool-choice --tool-call-parser kimi_k2
+```
+
+- Send `tools` to `POST /v1/chat/completions`. LLaDA2.2-mini returns `tool_calls`, and one answer can hold more than one call. LLaDA2.2-flash is not tested.
+- With `stream`, a tool call arrives when its block is complete.
+- A named function and `tool_choice: "required"` need structured outputs. Diffusion models do not support them yet.
+
 ## Decoding
 
 | Setting | Value |
