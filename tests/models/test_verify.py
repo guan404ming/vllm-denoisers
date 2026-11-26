@@ -11,7 +11,7 @@ from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
 
 from denoisers.models.common import verify
-from denoisers.models.common.verify import verify_block_diffusion
+from denoisers.models.common.verify import GRAPH_SIZES, verify_block_diffusion
 from denoisers.runtime.model_state import BlockDiffusionModelState, ranged
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
 from denoisers.scheduler.resident_active import (
@@ -41,6 +41,7 @@ def make_config():
         cache_config=SimpleNamespace(enable_prefix_caching=False, sliding_window=None),
         model_config=SimpleNamespace(get_head_size=lambda: 64),
         attention_config=SimpleNamespace(backend=AttentionBackendEnum.FLASH_ATTN),
+        compilation_config=SimpleNamespace(**dict.fromkeys(GRAPH_SIZES)),
     )
     hf_config = SimpleNamespace(
         decode_policy="low_confidence", canvas_length=BLOCK, kv_policy="masked"
@@ -66,6 +67,18 @@ def test_sequences_fit_the_batch_token_budget():
     scheduler.max_num_batched_tokens = BLOCK - 1
     with pytest.raises(ValueError, match="canvas_length"):
         verify_block_diffusion(config, hf_config, "test")
+
+
+def test_decode_graphs_cover_every_sequence():
+    config, hf_config = make_config()
+    scheduler, compilation = config.scheduler_config, config.compilation_config
+    scheduler.max_num_batched_tokens, scheduler.max_num_seqs = 5 * BLOCK, 1024
+    verify_block_diffusion(config, hf_config, "test")
+    assert compilation.max_decode_cudagraph_capture_requests == 5
+    compilation.max_decode_cudagraph_capture_requests = None
+    compilation.max_cudagraph_capture_size = 64
+    verify_block_diffusion(config, hf_config, "test")
+    assert compilation.max_decode_cudagraph_capture_requests is None
 
 
 def test_resact_keeps_its_resident_count():
