@@ -31,7 +31,7 @@ vllm serve inclusionAI/LLaDA2.2-mini --max-model-len 4096 --generation-config vl
   --enable-auto-tool-choice --tool-call-parser kimi_k2
 ```
 
-- Send `tools` to `POST /v1/chat/completions`. LLaDA2.2 returns `tool_calls`, and one answer can hold more than one call.
+- Send `tools` to `POST /v1/chat/completions`. LLaDA2.2-mini returns `tool_calls`, and one answer can hold more than one call. LLaDA2.2-flash is not tested.
 - With `stream`, a tool call arrives when its block is complete.
 - A named function and `tool_choice: "required"` need structured outputs. Diffusion models do not support them yet.
 
