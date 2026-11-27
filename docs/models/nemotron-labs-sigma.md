@@ -29,8 +29,7 @@ vllm serve nvidia/Nemotron-Labs-Sigma-3B-instruct \
 
 ## Notes
 
-- Distilled blockwise checkpoints run on the canvas runtime with batching, CUDA graphs, and prefix caching. Each block starts from fresh noise and commits with causal attention.
-- On GSM8K (200 questions, 4-shot), the canvas runtime is 25 times faster than the model loop for 3B-nfe2 and 18 times faster for 8B-nfe8, with similar accuracy (96 vs 96 and 178 vs 180 correct).
+- Distilled blockwise checkpoints run on the canvas runtime. Each block starts from fresh noise and commits with causal attention.
 - Base, instruct, and self-speculative checkpoints use Model Runner V2 to prepare each block and return sampled token IDs. The pinned vLLM build selects V2 automatically for this single-GPU CUDA configuration with Triton installed.
 - These checkpoints need one CUDA GPU, eager execution, unquantized weights, and default sampling parameters. Logprobs and per-request policy overrides are unsupported.
 - The adapter retains latents, self-conditioning, and the clean prefix cache across steps. Each new block re-encodes the committed prefix. Self-speculative BF16 output may differ from an uninterrupted reference run at block boundaries.

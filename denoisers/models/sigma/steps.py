@@ -9,9 +9,8 @@ class SigmaBlock:
         self.device = prefix.device
         recipe = model.generation_config
         self.speculative = getattr(recipe, "decoding", None) == "self_speculative"
-        self.distilled = getattr(model.config, "native_family", None) == "phased_dmd"
         self.block = model.config.block_size
-        steps = model.config.native_nfe if self.distilled else 32
+        steps = 32
         if self.speculative:
             self.block = recipe.draft_width
             steps = recipe.diffusion_calls_per_round
@@ -35,7 +34,7 @@ class SigmaBlock:
         condition = None
         positions = self.cache.seq_length() + self.offsets
         calls = len(self.grid) - int(self.speculative)
-        guided = not (self.distilled or self.speculative)
+        guided = not self.speculative
         for i in range(calls):
             gamma = self.grid[i : i + 1]
             logits, clean, mean, _ = self.model._denoise_block(

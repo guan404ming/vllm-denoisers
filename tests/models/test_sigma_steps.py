@@ -33,20 +33,12 @@ def sigma():
     "recipe,nfe",
     [
         ("ddim", 32),
-        ("fresh_x0", 2),
-        ("fresh_x0", 4),
-        ("fresh_x0", 8),
-        ("fresh_x0", 16),
         ("self_speculative", 2),
     ],
 )
 @torch.inference_mode()
 def test_sigma_matches_reference_at_each_step(sigma, monkeypatch, recipe, nfe):
-    distilled = recipe != "ddim"
     speculative = recipe == "self_speculative"
-    monkeypatch.setattr(
-        sigma.config, "native_family", "phased_dmd" if distilled else None, raising=False
-    )
     monkeypatch.setattr(sigma.config, "native_nfe", nfe, raising=False)
     monkeypatch.setattr(sigma.generation_config, "decoding", recipe, raising=False)
     monkeypatch.setattr(sigma.generation_config, "draft_width", 3, raising=False)
@@ -70,8 +62,8 @@ def test_sigma_matches_reference_at_each_step(sigma, monkeypatch, recipe, nfe):
                 steps=nfe,
                 sampler=recipe,
                 time_schedule="log_snr",
-                guidance_scale=1.0 if distilled else 3.0,
-                score_temp=1.0 if distilled else 0.3,
+                guidance_scale=3.0,
+                score_temp=0.3,
             )
         reference_calls = denoise.call_args_list.copy()
         denoise.reset_mock()
