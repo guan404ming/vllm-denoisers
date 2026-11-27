@@ -7,20 +7,20 @@ organization: nvidia
 
 [nvidia/SDLLM-MDLM-1.7B-Base](https://huggingface.co/nvidia/SDLLM-MDLM-1.7B-Base){ target="_blank" rel="noopener" }
 
+## Serve
+
+```bash
+vllm serve vllm-denoisers/SDLLM-MDLM-1.7B-Base \
+  --no-enable-prefix-caching --max-model-len 2048
+```
+
 ## Convert
 
-The release ships a training checkpoint, not a Hugging Face folder. Convert it once:
+The release ships a training checkpoint, not a Hugging Face folder. [vllm-denoisers/SDLLM-MDLM-1.7B-Base](https://huggingface.co/vllm-denoisers/SDLLM-MDLM-1.7B-Base){ target="_blank" rel="noopener" } holds the converted copy. To build it yourself:
 
 ```bash
 hf download nvidia/SDLLM-MDLM-1.7B-Base --local-dir SDLLM-MDLM-1.7B-Base
 python -m denoisers.models.sdllm.convert SDLLM-MDLM-1.7B-Base SDLLM-MDLM-1.7B-Base-hf
-```
-
-## Serve
-
-```bash
-vllm serve ./SDLLM-MDLM-1.7B-Base-hf \
-  --no-enable-prefix-caching --max-model-len 2048
 ```
 
 ## Decoding
