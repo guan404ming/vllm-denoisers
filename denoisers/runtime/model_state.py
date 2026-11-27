@@ -265,6 +265,7 @@ class BlockDiffusionModelState(ModelState):
         positions.copy_(torch.arange(num_tokens, device=self.device) % self.max_model_len)
         ids = self._block_ids[:num_tokens]
         ids.copy_((positions // self.state.block_length).clamp_(max=self.num_route_blocks - 1))
+        positions.remainder_(self.max_model_len)
         self._set_blocks(ids)
         if self._inputs_embeds is None:
             return {"positions": positions}
