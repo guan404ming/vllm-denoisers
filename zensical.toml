@@ -21,6 +21,7 @@ nav = [
             "models/llada-moe.md",
             "models/nemotron-labs-diffusion.md",
             "models/sdar-trado.md",
+            "models/sdllm.md",
             "models/stable-diffcoder.md",
             "models/trado.md",
         ] },

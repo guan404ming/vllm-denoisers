@@ -11,6 +11,7 @@
 - [LLaDA-MoE](models/llada-moe.md) · LLaDA decoding on a Qwen3-MoE backbone.
 - [Nemotron Labs Diffusion](models/nemotron-labs-diffusion.md) · Greedy unmasking with causal block seeds.
 - [SDAR](models/sdar-trado.md) · Confidence-threshold decoding.
+- [SDLLM-MDLM](models/sdllm.md) · Full-canvas attention with sub-block unmasking after a one-time conversion.
 - [Stable-DiffCoder](models/stable-diffcoder.md) · Confidence-ranked unmasking in four-token blocks.
 - [TraDo](models/trado.md) · Confidence-threshold decoding with the SDAR adapter.
 

@@ -17,6 +17,7 @@ from denoisers.models.nemotron_diffusion.config import (
     NemotronLabsDiffusionVLMTokenizerFast,
 )
 from denoisers.models.sdar.config import SDARConfig, SDARMoeConfig
+from denoisers.models.sdllm.config import SDLLMConfig
 from denoisers.models.sigma.config import SigmaModelConfig
 from denoisers.models.stable_diffcoder.model import StableDiffcoderModelConfig
 
@@ -47,6 +48,7 @@ FAMILIES = (
     ("DreamModel", "dream.model:DreamModel", DreamConfig, DreamTokenizer),
     ("LLaDAModelLM", "llada.model:LLaDAModelLM", LLaDAConfig, None),
     ("LLaDAMoEModel", "llada.model:LLaDAMoEModelLM", None, None),
+    ("SDLLMForMaskedDiffusion", "sdllm.model:SDLLMForMaskedDiffusion", SDLLMConfig, None),
 )
 
 
