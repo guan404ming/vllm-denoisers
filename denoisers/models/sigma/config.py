@@ -1,48 +1,30 @@
-from vllm.config.diffusion import DiffusionConfig
 from vllm.model_executor.models.config import VerifyAndUpdateConfig
 
 from denoisers.models.common.verify import verify_block_diffusion
-from denoisers.scheduler import select_scheduler
 
 
 class SigmaModelConfig(VerifyAndUpdateConfig):
     @staticmethod
     def verify_and_update_model_config(model_config):
-        if model_config.logits_processors:
-            raise ValueError("Sigma does not support custom logits processors.")
-        model_config.logits_processors = ["denoisers.models.sigma.params:SigmaSamplingParams"]
-        model_config.hf_config.schedule_parameterization = "projected_bernstein"
-        model_config.hf_config.canvas_length = model_config.hf_config.block_size
-        blockwise = (
-            model_config.try_get_generation_config().get("decoding") == "blockwise_diffusion"
-        )
-        model_config.hf_config.decode_policy = "sigma" if blockwise else None
-        if blockwise:
-            model_config.hf_config.feedback_policy = "latent_conditioning"
-            model_config.hf_config.mask_token_id = -1
+        config = model_config.hf_config
+        decoding = model_config.try_get_generation_config().get("decoding")
+        config.decode_policy = None if decoding == "self_speculative" else "sigma"
+        if config.decode_policy is None:
+            model_config.override_generation_config = {
+                "temperature": 0.0,
+                **model_config.override_generation_config,
+            }
+            return
+        distilled = getattr(config, "native_nfe", None) is not None
+        config.canvas_length = config.block_size
+        config.feedback_policy = "latent_conditioning"
+        config.mask_token_id = -1
+        config.denoise_steps = config.native_nfe if distilled else 32
+        config.guidance_scale = 1.0 if distilled else 3.0
+        config.score_temperature = 1.0 if distilled else 0.3
 
     @staticmethod
     def verify_and_update_config(vllm_config):
-        model = vllm_config.model_config
-        if model.hf_config.decode_policy == "sigma":
-            verify_block_diffusion(vllm_config, model.hf_config, "Sigma")
-            return
-        if model.quantization is not None:
-            raise ValueError("Sigma needs unquantized checkpoint weights.")
-        if not model.enforce_eager:
-            raise ValueError("Sigma needs --enforce-eager.")
-        parallel = vllm_config.parallel_config
-        if parallel.tensor_parallel_size != 1 or parallel.pipeline_parallel_size != 1:
-            raise ValueError("Sigma needs a single GPU per replica.")
-        canvas = model.hf_config.block_size
-        if vllm_config.diffusion_config is None:
-            vllm_config.diffusion_config = DiffusionConfig(canvas_length=canvas)
-        if vllm_config.diffusion_config.canvas_length != canvas:
-            raise ValueError(f"Sigma needs canvas_length {canvas}.")
-        scheduler = vllm_config.scheduler_config
-        if scheduler.max_num_batched_tokens < scheduler.max_num_seqs * canvas:
-            raise ValueError("Sigma needs max_num_batched_tokens >= max_num_seqs * canvas_length.")
-        if scheduler.async_scheduling:
-            raise ValueError("Sigma needs --no-async-scheduling.")
-        scheduler.async_scheduling = False
-        select_scheduler(scheduler)
+        config = vllm_config.model_config.hf_config
+        if config.decode_policy is not None:
+            verify_block_diffusion(vllm_config, config, "Sigma")

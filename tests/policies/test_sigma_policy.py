@@ -11,10 +11,17 @@ VOCAB = 5
 GRID = torch.tensor([6.0, 1.0, -3.0], dtype=torch.float64)
 
 
-def make_policy():
+def make_policy(guidance=1.0, temperature=1.0, unconditional=None):
     matrix = torch.randn(VOCAB, DIM, generator=torch.Generator().manual_seed(0))
-    model = SimpleNamespace(gamma_grid=lambda calls: GRID[:calls], embedding_matrix=lambda: matrix)
-    return SigmaLatent(model, 3, DIM), matrix
+    model = SimpleNamespace(
+        gamma_grid=lambda calls: GRID[:calls],
+        embedding_matrix=lambda: matrix,
+        prior=lambda z, gamma: (
+            (torch.sigmoid(-gamma).sqrt() / torch.sigmoid(gamma) * z) @ matrix.t()
+        ),
+        unconditional=unconditional,
+    )
+    return SigmaLatent(model, 3, DIM, guidance, temperature), matrix
 
 
 def latent_rows(step):
@@ -61,3 +68,25 @@ def test_committed_block_restarts_from_noise():
     after, _, _, _ = advance(rows, None, policy, -1)
     assert after.soft[0, :, -1].eq(1).all() and after.soft[0, :, DIM : 2 * DIM].abs().sum() == 0
     assert torch.equal(after.soft[1], rows.soft[1])
+
+
+def test_guided_step_moves_deterministically_toward_the_guided_mean():
+    uncond = torch.randn(2, 4, VOCAB, generator=torch.Generator().manual_seed(4))
+    policy, matrix = make_policy(3.0, 0.3, lambda z, gamma: uncond)
+    rows = latent_rows([0, 0])
+    logits = torch.randn(2, 4, VOCAB, generator=torch.Generator().manual_seed(5))
+    after, _ = policy(logits, rows)
+    again, _ = policy(logits, rows)
+    gamma, following = GRID[0].float(), GRID[1].float()
+    z = rows.soft[..., :DIM]
+    prior = torch.sigmoid(-gamma).sqrt() / torch.sigmoid(gamma) * z
+    mean = (logits + prior @ matrix.t()).softmax(-1) @ matrix
+    guided = uncond.softmax(-1) @ matrix
+    guided = guided + 3.0 * (mean - guided)
+    alpha, sigma = torch.sigmoid(-gamma).sqrt(), torch.sigmoid(gamma).sqrt()
+    noise = (z - alpha * guided) / sigma / 0.3
+    clean = (z - sigma * noise) / alpha
+    expected = torch.sigmoid(-following).sqrt() * clean + torch.sigmoid(following).sqrt() * noise
+    assert torch.allclose(after.soft[..., :DIM], expected, atol=1e-5)
+    assert torch.equal(after.soft, again.soft)
+    assert torch.allclose(after.soft[..., DIM : 2 * DIM], mean, atol=1e-6)
