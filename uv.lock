@@ -5438,7 +5438,7 @@ wheels = [
 
 [[package]]
 name = "vllm-denoisers"
-version = "0.34.0a4"
+version = "0.34.0a5"
 source = { editable = "." }
 dependencies = [
     { name = "torch" },
