@@ -13,10 +13,12 @@ nav = [
         { "Overview" = "models.md" },
         { "Token-canvas models" = [
             "models/diffusion-gemma.md",
+            "models/dllm-bd3lm.md",
             "models/dream.md",
             "models/fast-dllm-v2.md",
             "models/llada.md",
             "models/llada2.md",
+            "models/llada-moe.md",
             "models/nemotron-labs-diffusion.md",
             "models/sdar-trado.md",
             "models/stable-diffcoder.md",

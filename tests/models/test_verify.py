@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+import torch
 
 pytest.importorskip("vllm")
 
@@ -165,6 +166,20 @@ def test_block_ranges_cover_prefilling_rows_only():
         is_prefilling_np=np.array([True, False, False]),
     )
     assert runtime._doc_ranges(batch) == {0: [(0, 3), (4, 5)]}
+
+
+def test_dummy_positions_stay_below_max_model_len():
+    runtime = object.__new__(BlockDiffusionModelState)
+    runtime.device = "cpu"
+    runtime.model_config = SimpleNamespace(max_model_len=8)
+    runtime.num_route_blocks = 64
+    runtime.state = SimpleNamespace(block_length=4)
+    runtime._positions = torch.zeros(20, dtype=torch.int64)
+    runtime._block_ids = torch.zeros(20, dtype=torch.int64)
+    runtime._inputs_embeds = None
+    runtime.model = None
+    positions = runtime.prepare_dummy_inputs(1, 20)["positions"]
+    assert positions.tolist() == list(range(8)) * 2 + list(range(4))
 
 
 class ExternalScheduler(DenoisersScheduler):
