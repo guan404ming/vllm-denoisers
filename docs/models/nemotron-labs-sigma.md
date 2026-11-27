@@ -10,21 +10,18 @@ organization: nvidia
 ## Serve
 
 ```bash
-vllm serve nvidia/Nemotron-Labs-Sigma-distill-3B-nfe2 \
-  --trust-remote-code --enforce-eager --no-async-scheduling --no-enable-prefix-caching \
-  --dtype bfloat16
+vllm serve nvidia/Nemotron-Labs-Sigma-distill-3B-nfe2 --trust-remote-code --dtype bfloat16
 ```
 
 ## Decoding
 
 | Setting | Value |
 | --- | --- |
-| Base or instruct (3B, 8B) | DDIM, 32 log-SNR steps, guidance 3, score temperature 0.3. |
-| Distilled (NFE 2, 4, 8, 16) | Fixed checkpoint step count, fresh noise per transition. |
-| Distilled self-speculative | Diffusion drafts, greedy autoregressive verification. |
+| Base or instruct (3B, 8B) | `sigma`: DDIM, 32 log-SNR steps, guidance 3, score temperature 0.3. |
+| Distilled (NFE 2, 4, 8, 16) | `sigma`: checkpoint step count, fresh noise per transition. |
+| Distilled self-speculative | Autoregressive decoding with the AR head. |
 
 ## Notes
 
-- Sigma uses Model Runner V2 to prepare each block and return sampled token IDs. The pinned vLLM build selects V2 automatically for this single-GPU CUDA configuration with Triton installed.
-- Use one CUDA GPU, eager execution, unquantized weights, and default sampling parameters. Logprobs and per-request policy overrides are unsupported.
-- The adapter retains latents, self-conditioning, and the clean prefix cache across steps. Each new block re-encodes the committed prefix. Self-speculative BF16 output may differ from an uninterrupted reference run at block boundaries.
+- Each block starts from noise and commits with causal attention. Guidance adds one block-only pass per step.
+- The self-speculative reference returns the greedy output of the AR head, so the plugin serves these checkpoints as autoregressive models.

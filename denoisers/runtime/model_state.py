@@ -94,14 +94,15 @@ class BlockDiffusionModelState(ModelState):
         self._seq_lens = torch.zeros(self.max_num_reqs, dtype=torch.int32, device=device)
         self._positions = torch.zeros(self.max_num_tokens, dtype=torch.int64, device=device)
         self._block_ids = torch.zeros(self.max_num_tokens, dtype=torch.int64, device=device)
-        if self.supports_mm_inputs and hidden_size is None:
-            hidden_size = self.inputs_embeds_size
         self._inputs_embeds = (
-            None
-            if hidden_size is None
-            else torch.zeros(
-                self.max_num_tokens, hidden_size, dtype=self.model_config.dtype, device=device
+            torch.zeros(
+                self.max_num_tokens,
+                self.inputs_embeds_size,
+                dtype=self.model_config.dtype,
+                device=device,
             )
+            if self.feedback is not None or self.supports_mm_inputs
+            else None
         )
         self._mm_embeds = None
         self._seed_slots: list[int] = []

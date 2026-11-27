@@ -21,3 +21,10 @@ class SelfConditioning(FeedbackPolicy):
 
     def condition(self, embeds: torch.Tensor, soft: torch.Tensor) -> torch.Tensor:
         return self.model.self_conditioning(embeds, soft)
+
+
+@registry.register("latent_conditioning")
+class LatentConditioning(SelfConditioning):
+    def __init__(self, model):
+        super().__init__(model)
+        self.hidden_size = 2 * model.config.embed_dim + 1

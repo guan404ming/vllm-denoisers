@@ -18,4 +18,4 @@
 
 ## Continuous-latent models
 
-- [Nemotron Labs Sigma](models/nemotron-labs-sigma.md) · Latent diffusion with checkpoint-specific sampling or draft verification.
+- [Nemotron Labs Sigma](models/nemotron-labs-sigma.md) · Latent diffusion with guided or distilled sampling.
