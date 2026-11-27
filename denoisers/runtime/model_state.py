@@ -262,7 +262,7 @@ class BlockDiffusionModelState(ModelState):
 
     def prepare_dummy_inputs(self, num_reqs: int, num_tokens: int) -> dict[str, Any]:
         positions = self._positions[:num_tokens]
-        positions.copy_(torch.arange(num_tokens, device=self.device))
+        positions.copy_(torch.arange(num_tokens, device=self.device) % self.max_model_len)
         ids = self._block_ids[:num_tokens]
         ids.copy_((positions // self.state.block_length).clamp_(max=self.num_route_blocks - 1))
         self._set_blocks(ids)

@@ -1,6 +1,7 @@
 import re
 
 from vllm.model_executor.models.llama import LlamaForCausalLM
+from vllm.model_executor.models.qwen3_moe import Qwen3MoeForCausalLM
 from vllm.model_executor.models.utils import WeightsMapper
 
 from denoisers.models.common.mixin import BlockDiffusionModel
@@ -29,3 +30,7 @@ class LLaDAModelLM(BlockDiffusionModel, LlamaForCausalLM):
 
     def load_weights(self, weights):
         return super().load_weights(self.hf_to_vllm_mapper.apply(weights))
+
+
+class LLaDAMoEModelLM(BlockDiffusionModel, Qwen3MoeForCausalLM):
+    pass
