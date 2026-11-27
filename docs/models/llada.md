@@ -27,3 +27,4 @@ vllm serve GSAI-ML/LLaDA-8B-Instruct \
 - Fit prompt and response on one canvas for reference parity. Longer prompts prefill earlier tokens once. The trailing prompt block shares the canvas with the response. Splitting a longer prompt can change its bidirectional attention context.
 - `max_tokens` can further limit the response. For a larger canvas, increase the [batch token budget](../configuration/batch-limits.md).
 - At positive temperatures, rank sampled tokens by their untempered probabilities.
+- `GSAI-ML/LLaDA-1.5` uses the same setup.

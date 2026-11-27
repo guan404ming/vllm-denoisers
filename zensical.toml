@@ -12,6 +12,7 @@ nav = [
     { "Recipes" = [
         { "Overview" = "models.md" },
         { "Token-canvas models" = [
+            "models/diffucoder.md",
             "models/diffusion-gemma.md",
             "models/dllm-bd3lm.md",
             "models/dream.md",
