@@ -2,6 +2,7 @@
 
 ## Token-canvas models
 
+- [DiffuCoder](models/diffucoder.md) · Entropy-ranked code unmasking with the Dream adapter.
 - [DiffusionGemma](models/diffusion-gemma.md) · Confidence-based acceptance, renoising, and soft inputs.
 - [dLLM BD3LM](models/dllm-bd3lm.md) · One-token-per-step unmasking in 32-token blocks.
 - [Dream](models/dream.md) · Entropy-ranked unmasking with shifted logits.

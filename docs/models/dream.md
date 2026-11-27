@@ -27,3 +27,4 @@ vllm serve Dream-org/Dream-v0-Instruct-7B \
 - Set `top_p` once in the model config. The sampler retains the top token and nucleus candidates with scaled probability ≥ 1/256.
 - For reference parity, fit prompt and response on one canvas. Longer prompts retain only the trailing partial block. Longer responses span canvases. Splitting a longer prompt can change its bidirectional attention context.
 - Set `denoise_steps` per full canvas.
+- `Dream-org/Dream-Coder-v0-Instruct-7B` uses the same setup. Its reference sampling uses `temperature` 0.1 and `top_p` 0.95.
