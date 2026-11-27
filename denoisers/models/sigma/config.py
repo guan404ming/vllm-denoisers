@@ -1,6 +1,7 @@
 from vllm.config.diffusion import DiffusionConfig
 from vllm.model_executor.models.config import VerifyAndUpdateConfig
 
+from denoisers.models.common.verify import verify_block_diffusion
 from denoisers.scheduler import select_scheduler
 
 
@@ -12,10 +13,20 @@ class SigmaModelConfig(VerifyAndUpdateConfig):
         model_config.logits_processors = ["denoisers.models.sigma.params:SigmaSamplingParams"]
         model_config.hf_config.schedule_parameterization = "projected_bernstein"
         model_config.hf_config.canvas_length = model_config.hf_config.block_size
+        blockwise = (
+            model_config.try_get_generation_config().get("decoding") == "blockwise_diffusion"
+        )
+        model_config.hf_config.decode_policy = "sigma" if blockwise else None
+        if blockwise:
+            model_config.hf_config.feedback_policy = "latent_conditioning"
+            model_config.hf_config.mask_token_id = -1
 
     @staticmethod
     def verify_and_update_config(vllm_config):
         model = vllm_config.model_config
+        if model.hf_config.decode_policy == "sigma":
+            verify_block_diffusion(vllm_config, model.hf_config, "Sigma")
+            return
         if model.quantization is not None:
             raise ValueError("Sigma needs unquantized checkpoint weights.")
         if not model.enforce_eager:

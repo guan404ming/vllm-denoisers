@@ -173,6 +173,8 @@ class BlockDiffusionSampler(CanvasSampler):
             canvas = state.canvas[slot : slot + 1]
             policy = self.decoders.of(slot)
             state.canvas[slot] = policy.init_canvas(canvas, slots, first=True)[0]
+            if state.soft is not None:
+                state.soft[slot] = policy.init_soft(state.soft[slot])
             if policy.prefill_seed is not None:
                 state.canvas[slot, shift] = state.prefill_seed[slot]
             self.req_states.draft_tokens[slot, :block] = state.canvas[slot]

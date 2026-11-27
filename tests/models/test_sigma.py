@@ -78,7 +78,11 @@ def test_sigma_resumes_by_request_and_discards_cancelled_state(monkeypatch):
 
 
 def test_sigma_base_loads_exported_schedule():
-    config = SimpleNamespace(hf_config=SimpleNamespace(block_size=32), logits_processors=None)
+    config = SimpleNamespace(
+        hf_config=SimpleNamespace(block_size=32),
+        logits_processors=None,
+        try_get_generation_config=dict,
+    )
     SigmaModelConfig.verify_and_update_model_config(config)
     assert config.hf_config.schedule_parameterization == "projected_bernstein"
     assert config.hf_config.canvas_length == 32

@@ -3,11 +3,17 @@ from torch import nn
 from transformers import AutoModel, GenerationConfig
 from vllm.model_executor.models.utils import AutoWeightsLoader
 
+from denoisers.models.sigma.diffusion import NemotronLabsSigmaBlockDiffusion
 from denoisers.models.sigma.state import SigmaModelState
 from denoisers.models.sigma.steps import SigmaBlock
 
 
 class NemotronLabsSigmaModel(nn.Module):
+    def __new__(cls, *, vllm_config, prefix=""):
+        if vllm_config.model_config.hf_config.decode_policy == "sigma":
+            return NemotronLabsSigmaBlockDiffusion(vllm_config=vllm_config, prefix=prefix)
+        return super().__new__(cls)
+
     def __init__(self, *, vllm_config, prefix=""):
         super().__init__()
         config = vllm_config.model_config

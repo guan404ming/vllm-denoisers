@@ -28,7 +28,7 @@ def fresh_rows(rows: CanvasRows, mask_id: int, policy, logits: torch.Tensor | No
         history=None if rows.history is None else torch.zeros_like(rows.history),
         history_len=None if rows.history_len is None else torch.zeros_like(rows.history_len),
         committing=torch.zeros_like(rows.committing),
-        soft=None if rows.soft is None else torch.zeros_like(rows.soft),
+        soft=None if rows.soft is None else policy.init_soft(rows.soft),
         slots=rows.slots,
         salt=None if rows.salt is None else rows.salt + 1,
         stops=rows.stops,

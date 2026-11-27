@@ -41,6 +41,9 @@ class DecodePolicy(ABC):
     def init_canvas(self, canvas: torch.Tensor, slots=None, first: bool = False) -> torch.Tensor:
         return canvas
 
+    def init_soft(self, soft: torch.Tensor) -> torch.Tensor:
+        return torch.zeros_like(soft)
+
     def next_seed(self, logits: torch.Tensor) -> torch.Tensor | None:
         return None
 
