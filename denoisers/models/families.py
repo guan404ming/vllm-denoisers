@@ -2,7 +2,7 @@ from transformers import AutoConfig, AutoTokenizer
 from vllm import ModelRegistry
 from vllm.model_executor.models.config import MODELS_CONFIG_MAP
 
-from denoisers.models.a2d.config import A2DQwen3Config
+from denoisers.models.a2d.config import A2DQwen2Config, A2DQwen3Config
 from denoisers.models.common.verify import BlockDiffusionModelConfig
 from denoisers.models.diffusion_gemma.model import DiffusionGemmaForBlockDiffusionConfig
 from denoisers.models.dream.config import DreamConfig
@@ -27,6 +27,7 @@ FAMILIES = (
     ("SDARForCausalLM", "sdar.model:SDARForCausalLM", SDARConfig, None),
     ("SDARMoeForCausalLM", "sdar.model:SDARMoeForCausalLM", SDARMoeConfig, None),
     ("A2DQwen3LMHeadModel", "sdar.model:SDARForCausalLM", A2DQwen3Config, None),
+    ("A2DQwen2LMHeadModel", "fast_dllm.model:FastDLLMQwenForCausalLM", A2DQwen2Config, None),
     (
         "Fast_dLLM_QwenForCausalLM",
         "fast_dllm.model:FastDLLMQwenForCausalLM",
