@@ -4,7 +4,7 @@
 
 - [DiffuCoder](models/diffucoder.md) · Entropy-ranked code unmasking with the Dream adapter.
 - [DiffusionGemma](models/diffusion-gemma.md) · Confidence-based acceptance, renoising, and soft inputs.
-- [dLLM BD3LM](models/dllm-bd3lm.md) · One-token-per-step unmasking in 32-token blocks.
+- [dLLM Tiny-A2D](models/dllm-bd3lm.md) · BD3LM block diffusion or MDLM sub-block unmasking.
 - [Dream](models/dream.md) · Entropy-ranked unmasking with shifted logits.
 - [Fast-dLLM v2](models/fast-dllm-v2.md) · Greedy block seeds and sub-block decoding.
 - [LLaDA-8B](models/llada.md) · Full-canvas attention with sub-block unmasking.
