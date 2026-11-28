@@ -33,7 +33,7 @@ vllm serve <model> --hf-overrides '{"speculate":true}'
 ```
 
 - The policy must score and move a block-aligned canvas with a bidirectional commit, such as `low_confidence`, `llada`, `dream`, or `fast_dllm`.
-- Speculation does not support `kv_policy`, `feedback_policy`, `--scheduler-cls resact`, or `--enforce-eager`.
+- Speculation does not support `kv_policy`, `feedback_policy`, or `--scheduler-cls resact`.
 - The plugin runs speculation on `FLASH_ATTN` with FlashAttention 4.
 - Requests keep the default policy. The plugin ignores a per-request `decode_policy` and logs a warning.
 - The `elastic` scheduler picks the width at each step. See [Request scheduling](request-scheduling.md#choose-a-scheduler).
