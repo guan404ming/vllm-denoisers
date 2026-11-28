@@ -1,3 +1,4 @@
+import time
 from types import SimpleNamespace
 
 import numpy as np
@@ -22,12 +23,14 @@ from denoisers.runtime.batch import finished_prefills, query_lens
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime, inverse_index
 from denoisers.runtime.replay import Replay
+from denoisers.scheduler import widths
 from denoisers.scheduler.scores import Probe
 
 logger = init_logger("vllm.denoisers")
 
 _NO_PENALTIES = SimpleNamespace(output_bin_counts=None)
 LOGITS_BYTES = 20
+DECAY = 0.9999
 
 
 def _output(sampled, num_sampled, num_rejected, logprobs=None) -> SamplerOutput:
@@ -125,6 +128,9 @@ class BlockDiffusionSampler(CanvasSampler):
         self._ahead_done_host = torch.zeros(deep, dtype=torch.bool, pin_memory=True)
         self._ahead_need = torch.zeros(deep, dtype=torch.int32, device=device)
         self._ahead_need_host = torch.zeros(deep, dtype=torch.int32, pin_memory=True)
+        self._gain = torch.zeros(2, 2 * deep[1] + 3, device=device)
+        self._gain_host = torch.zeros(2, 2 * deep[1] + 3, pin_memory=True)
+        self._then, self._spent = 0.0, None
         self._replay = self._settle
         if speculate and device.type == "cuda":
             for name, value in list(vars(self.policy).items()):
@@ -180,6 +186,10 @@ class BlockDiffusionSampler(CanvasSampler):
 
     def _finish_prefills(self, input_batch) -> None:
         self._need_event.synchronize()
+        now = time.perf_counter()
+        if self._spent:
+            widths.periods.append((*self._spent, now - self._then))
+        self._then, self._spent = now, None
         if not input_batch.has_prefill:
             return
         state = self.state
@@ -560,9 +570,12 @@ class BlockDiffusionSampler(CanvasSampler):
     def _settle(self, rows, slots, packed, confidences, choices, noise_scores, noise_choices, seed):
         state = self.state
         later = None if noise_scores is None else (noise_scores, noise_choices)
-        row_sampled, row_num_sampled, drafts, _ = settle(
+        row_sampled, row_num_sampled, drafts, advanced = settle(
             state, slots, packed[:-1], confidences, choices, self.policy, later, seed
         )
+        level = packed[-1]
+        self._gain[0].index_add_(0, level, advanced.float())
+        self._gain[1].index_add_(0, level, torch.ones_like(level, dtype=torch.float32))
         self._need[slots] = (state.canvas[slots] == state.mask_id).sum(1, dtype=torch.int32)
         self._ahead_need[slots] = (state.ahead[slots] == state.mask_id).sum(2, dtype=torch.int32)
         self._guess_need[slots] = (state.guess[slots] == state.mask_id).sum(1, dtype=torch.int32)
@@ -582,6 +595,12 @@ class BlockDiffusionSampler(CanvasSampler):
         logprob_args = (max_logprobs, max_ids) if want_logprobs else None
         sparse = self.decoders.all(slots_np, "sparse_logits")
         full = not sparse or self.decoders.default.dense_scores or want_logprobs
+        if self.speculative:
+            self._spent = (len(rows_np), int(widths_np.sum()))
+            if widths.gains is None:
+                self._gain.zero_()
+                self._gain_host.zero_()
+                widths.gains = self._gain_host.numpy()
         if 2 * len(rows_np) * block > self._budget:
             self._budget = self._budget_tokens(device)
         per_chunk = max(1, self._budget // block)
@@ -605,6 +624,8 @@ class BlockDiffusionSampler(CanvasSampler):
         self._need_host.copy_(self._need, non_blocking=True)
         self._commit_host.copy_(self.state.committing, non_blocking=True)
         if self.speculative:
+            self._gain.mul_(DECAY)
+            self._gain_host.copy_(self._gain, non_blocking=True)
             self._mode_host.copy_(self.state.mode, non_blocking=True)
             self._guess_need_host.copy_(self._guess_need, non_blocking=True)
             self._ahead_done_host.copy_(self.state.ahead_done, non_blocking=True)

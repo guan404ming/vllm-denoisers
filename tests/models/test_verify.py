@@ -1,3 +1,4 @@
+import collections
 from types import SimpleNamespace
 
 import numpy as np
@@ -10,12 +11,16 @@ from vllm.config.scheduler import SchedulerConfig
 from vllm.v1.attention.backend import AttentionType
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
+from vllm.v1.core.sched.scheduler import Scheduler
 
 from denoisers.canvas.state import CanvasState
+from denoisers.hooks import cudagraphs
 from denoisers.models.common import verify
 from denoisers.models.common.verify import GRAPH_SIZES, verify_block_diffusion
 from denoisers.runtime.model_state import BlockDiffusionModelState, ranged
+from denoisers.scheduler import widths
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
+from denoisers.scheduler.elastic import ElasticAsyncScheduler, ElasticScheduler
 from denoisers.scheduler.resident_active import (
     DenoisersAsyncScheduler,
     DenoisersScheduler,
@@ -260,12 +265,15 @@ def test_other_modes_keep_native_scheduler(policy, chunked):
         ("resact", True, DenoisersAsyncScheduler),
         ("aligned", False, AlignedScheduler),
         ("aligned", True, AlignedAsyncScheduler),
+        ("elastic", False, ElasticScheduler),
+        ("elastic", True, ElasticAsyncScheduler),
     ],
 )
 def test_scheduler_short_names_follow_final_mode(monkeypatch, name, async_mode, expected):
     config, hf_config = make_config()
     hf_config.kv_policy = None
     config.instance_id = "short-name-test"
+    config.model_config.hf_config = SimpleNamespace(canvas_length=BLOCK, speculate_costs=[(8, 1.0)])
     config.parallel_config.data_parallel_rank = 0
     scheduler = config.scheduler_config
     scheduler.scheduler_cls = name
@@ -290,6 +298,62 @@ def test_speculate_widens_the_canvas_on_fa4(policy, count):
     assert config.diffusion_config.canvas_length == count * BLOCK
     assert config.attention_config.backend == AttentionBackendEnum.FLASH_ATTN
     assert config.attention_config.flash_attn_version == 4
+    assert config.scheduler_config.scheduler_cls == "denoisers.scheduler.elastic.ElasticScheduler"
+    assert hf_config.speculate_widths == list(range(BLOCK, (count + 1) * BLOCK, BLOCK))
+    config.model_config.hf_config = hf_config
+    query_lens = cudagraphs.get_decode_cudagraph_query_lens(config, count * BLOCK)
+    assert query_lens == dict.fromkeys(hf_config.speculate_widths, 1)
+
+
+def test_aligned_speculation_keeps_one_width():
+    config, hf_config = make_config()
+    config.diffusion_config = None
+    config.attention_config = SimpleNamespace(backend=None, flash_attn_version=None)
+    config.scheduler_config.max_num_batched_tokens = 4 * BLOCK
+    config.scheduler_config.scheduler_cls = "aligned"
+    hf_config.kv_policy, hf_config.speculate = None, True
+    verify_block_diffusion(config, hf_config, "test")
+    assert config.scheduler_config.scheduler_cls == "denoisers.scheduler.aligned.AlignedScheduler"
+    assert not hasattr(hf_config, "speculate_widths")
+
+
+def test_elastic_width_follows_measured_gains_and_step_time(monkeypatch):
+    monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
+    monkeypatch.setattr(Scheduler, "schedule", lambda self, throttle_prefills=False: None)
+    monkeypatch.setattr(widths, "periods", collections.deque([(1, BLOCK, 9.0)]))
+    monkeypatch.setattr(widths, "gains", np.ones((2, 5)))
+    config, hf_config = make_config()
+    config.diffusion_config.canvas_length = 4 * BLOCK
+    config.model_config.hf_config = hf_config
+    hf_config.speculate_costs = [
+        (8, 6.3),
+        (128, 6.7),
+        (256, 8.9),
+        (512, 14.6),
+        (1024, 27.4),
+        (2048, 52.0),
+        (4096, 101.0),
+    ]
+    scheduler = ElasticScheduler(vllm_config=config)
+    assert scheduler.dynamic_sd_lookup is scheduler
+    assert widths.gains is None and not widths.periods
+    assert scheduler[64] == 4 * BLOCK
+    gains = np.zeros((2, 5))
+    gains[0, 1:], gains[1, 1:] = [1000, 1680, 1850, 2030], 1000
+    monkeypatch.setattr(widths, "gains", gains)
+    scheduler.schedule()
+    assert [scheduler[size] for size in (1, 8, 64)] == [4 * BLOCK, 2 * BLOCK, BLOCK]
+    widths.periods.extend([(8, 128, 2 * 6.7e-3)] * 3)
+    scheduler.schedule()
+    assert scheduler[8] == 3 * BLOCK
+
+
+def test_elastic_needs_probed_costs(monkeypatch):
+    monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
+    config, hf_config = make_config()
+    config.model_config.hf_config = hf_config
+    with pytest.raises(ValueError, match="aligned"):
+        ElasticScheduler(vllm_config=config)
 
 
 @pytest.mark.parametrize(

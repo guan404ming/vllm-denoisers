@@ -63,12 +63,15 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
     policy = decode.registry.resolve(hf_config.decode_policy)
     if getattr(hf_config, "max_post_steps", 1) < 1:
         raise ValueError("max_post_steps must be at least 1.")
+    scheduler = vllm_config.scheduler_config
+    if getattr(hf_config, "speculate", False) and scheduler.scheduler_cls is None:
+        scheduler.scheduler_cls = "elastic"
+    select_scheduler(scheduler, align_prefill=policy.aligned and scheduler.enable_chunked_prefill)
     width = speculation_width(vllm_config, hf_config, policy, name)
     if vllm_config.diffusion_config is None:
         vllm_config.diffusion_config = DiffusionConfig(canvas_length=width)
     if vllm_config.diffusion_config.canvas_length != width:
         raise ValueError(f"{name} needs canvas_length {width}.")
-    scheduler = vllm_config.scheduler_config
     if vllm_config.parallel_config.pipeline_parallel_size > 1:
         raise ValueError(f"{name} does not support pipeline parallelism.")
     if vllm_config.parallel_config.enable_batch_sharded_sampling:
@@ -85,7 +88,8 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
             f"{name} prefix caching needs --block-size (and any --prefix-match-unit) "
             f"that is a multiple of canvas_length {canvas}."
         )
-    select_scheduler(scheduler, align_prefill=aligned and scheduler.enable_chunked_prefill)
+    if width > canvas and getattr(scheduler.get_scheduler_cls(), "elastic_widths", False):
+        hf_config.speculate_widths = list(range(canvas, width + 1, canvas))
     fit = scheduler.max_num_batched_tokens // width
     if not fit:
         raise ValueError(f"{name} needs max_num_batched_tokens >= canvas_length {width}.")
