@@ -74,9 +74,8 @@ class BlockDiffusionModelState(ModelState):
             device,
             hidden_size=hidden_size,
         )
-        self.decoders = Decoders(
-            policy, lambda cls: cls.from_config(hf_config, model), self.state, self.max_num_reqs
-        )
+        build = None if self.speculative else lambda cls: cls.from_config(hf_config, model)
+        self.decoders = Decoders(policy, build, self.state, self.max_num_reqs)
         self.kv = None
         name = getattr(hf_config, "kv_policy", None)
         if name is not None:

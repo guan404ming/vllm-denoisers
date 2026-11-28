@@ -23,6 +23,9 @@ class Decoders:
         return self.policies[0]
 
     def _create(self, name: str) -> int | None:
+        if self.build is None:
+            logger.warning("Per-request decode_policy is off; ignoring %r.", name)
+            return None
         if name not in registry.entries:
             logger.warning("Unknown decode_policy %r; using the default.", name)
             return None

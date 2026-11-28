@@ -1,5 +1,7 @@
 import collections
 
+from vllm.logger import init_logger
+
 from denoisers.scheduler import widths
 from denoisers.scheduler.aligned import AlignedAsyncScheduler, AlignedScheduler
 from denoisers.scheduler.widths import (
@@ -10,6 +12,8 @@ from denoisers.scheduler.widths import (
     gain_bound,
     median_floor,
 )
+
+logger = init_logger("vllm.denoisers")
 
 WINDOW = 64
 
@@ -26,10 +30,11 @@ class ElasticScheduler(AlignedScheduler):
         super().__init__(vllm_config, *args, **kwargs)
         config = vllm_config.model_config.hf_config
         if not getattr(config, "speculate_costs", None):
-            raise ValueError(
-                "Elastic speculation needs CUDA graphs in one process to probe costs. "
-                "Pass --scheduler-cls aligned for a fixed width."
+            logger.warning(
+                "Elastic speculation needs CUDA graphs in a single process to probe costs. "
+                "Using the widest canvas at every step."
             )
+            return
         self.block = config.canvas_length
         self.costs = fit_costs(config.speculate_costs)
         self.gains = tuple(range(1, vllm_config.diffusion_config.canvas_length // self.block + 1))
@@ -43,12 +48,9 @@ class ElasticScheduler(AlignedScheduler):
         return cost_at(self.costs, rows) * (median_floor(seen) if len(seen) >= 3 else 1.0)
 
     def __getitem__(self, size: int) -> int:
-        return self.block * best_width(size, self.block, self.cost, self.gains)
-
-    def schedule(self, throttle_prefills: bool = False):
         while widths.periods:
-            size, rows, seconds = widths.periods.popleft()
-            key = (rows // (size * self.block), bucket(rows))
+            count, rows, seconds = widths.periods.popleft()
+            key = (rows // (count * self.block), bucket(rows))
             self.excess.setdefault(key, collections.deque(maxlen=WINDOW)).append(
                 1000 * seconds / cost_at(self.costs, rows)
             )
@@ -58,7 +60,7 @@ class ElasticScheduler(AlignedScheduler):
                 gain_bound(float(advance[w]), float(forwards[w]), w)
                 for w in range(1, len(self.gains) + 1)
             )
-        return super().schedule(throttle_prefills)
+        return self.block * best_width(size, self.block, self.cost, self.gains)
 
 
 class ElasticAsyncScheduler(ElasticScheduler, AlignedAsyncScheduler):

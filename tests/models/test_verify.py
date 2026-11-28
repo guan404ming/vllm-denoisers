@@ -11,7 +11,6 @@ from vllm.config.scheduler import SchedulerConfig
 from vllm.v1.attention.backend import AttentionType
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
-from vllm.v1.core.sched.scheduler import Scheduler
 
 from denoisers.canvas.state import CanvasState
 from denoisers.hooks import cudagraphs
@@ -46,7 +45,7 @@ def make_config():
             pipeline_parallel_size=1, enable_batch_sharded_sampling=False
         ),
         cache_config=SimpleNamespace(enable_prefix_caching=False, sliding_window=None),
-        model_config=SimpleNamespace(get_head_size=lambda: 64),
+        model_config=SimpleNamespace(get_head_size=lambda: 64, enforce_eager=False),
         attention_config=SimpleNamespace(backend=AttentionBackendEnum.FLASH_ATTN),
         compilation_config=SimpleNamespace(**dict.fromkeys(GRAPH_SIZES)),
     )
@@ -273,7 +272,7 @@ def test_scheduler_short_names_follow_final_mode(monkeypatch, name, async_mode, 
     config, hf_config = make_config()
     hf_config.kv_policy = None
     config.instance_id = "short-name-test"
-    config.model_config.hf_config = SimpleNamespace(canvas_length=BLOCK, speculate_costs=[(8, 1.0)])
+    config.model_config.hf_config = SimpleNamespace(canvas_length=BLOCK)
     config.parallel_config.data_parallel_rank = 0
     scheduler = config.scheduler_config
     scheduler.scheduler_cls = name
@@ -319,7 +318,6 @@ def test_aligned_speculation_keeps_one_width():
 
 def test_elastic_width_follows_measured_gains_and_step_time(monkeypatch):
     monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
-    monkeypatch.setattr(Scheduler, "schedule", lambda self, throttle_prefills=False: None)
     monkeypatch.setattr(widths, "periods", collections.deque([(1, BLOCK, 9.0)]))
     monkeypatch.setattr(widths, "gains", np.ones((2, 5)))
     config, hf_config = make_config()
@@ -341,19 +339,16 @@ def test_elastic_width_follows_measured_gains_and_step_time(monkeypatch):
     gains = np.zeros((2, 5))
     gains[0, 1:], gains[1, 1:] = [1000, 1680, 1850, 2030], 1000
     monkeypatch.setattr(widths, "gains", gains)
-    scheduler.schedule()
     assert [scheduler[size] for size in (1, 8, 64)] == [4 * BLOCK, 2 * BLOCK, BLOCK]
     widths.periods.extend([(8, 128, 2 * 6.7e-3)] * 3)
-    scheduler.schedule()
     assert scheduler[8] == 3 * BLOCK
 
 
-def test_elastic_needs_probed_costs(monkeypatch):
+def test_elastic_keeps_the_widest_canvas_without_probed_costs(monkeypatch):
     monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
     config, hf_config = make_config()
     config.model_config.hf_config = hf_config
-    with pytest.raises(ValueError, match="aligned"):
-        ElasticScheduler(vllm_config=config)
+    assert getattr(ElasticScheduler(vllm_config=config), "dynamic_sd_lookup", None) is None
 
 
 @pytest.mark.parametrize(
@@ -363,6 +358,7 @@ def test_elastic_needs_probed_costs(monkeypatch):
         {"decode_policy": "nemotron_diffusion"},
         {"decode_policy": "indel"},
         {"backend": AttentionBackendEnum.TRITON_ATTN},
+        {"enforce_eager": True},
     ],
 )
 def test_speculate_rejects_what_the_tree_cannot_verify(change):
@@ -371,6 +367,7 @@ def test_speculate_rejects_what_the_tree_cannot_verify(change):
     config.attention_config = SimpleNamespace(
         backend=change.pop("backend", None), flash_attn_version=None
     )
+    config.model_config.enforce_eager = change.pop("enforce_eager", False)
     hf_config.kv_policy, hf_config.speculate = None, True
     vars(hf_config).update(change)
     with pytest.raises(ValueError, match="speculate"):

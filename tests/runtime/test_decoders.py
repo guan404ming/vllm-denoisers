@@ -42,6 +42,15 @@ def test_requests_pick_registered_compatible_policies():
     assert decoders.assign(3, request("indel")) is default
 
 
+def test_requests_keep_the_default_without_a_builder(caplog):
+    state = CanvasState(4, BLOCK, MASK, torch.device("cpu"))
+    default = LowConfidence(MASK, BLOCK, BLOCK, 0.9)
+    decoders = Decoders(default, None, state, 4)
+    assert decoders.assign(0, request("joint")) is default
+    assert decoders.assign(1, request(None)) is default
+    assert "Per-request decode_policy is off" in caplog.text
+
+
 def test_request_history_is_lazy_and_preserves_active_slots_when_it_grows():
     decoders, default, built = make_decoders()
     state = decoders.state

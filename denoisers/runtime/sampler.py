@@ -155,9 +155,6 @@ class BlockDiffusionSampler(CanvasSampler):
         self.state.stop_at(
             req_idx, {sampling_params.eos_token_id, *(sampling_params.stop_token_ids or ())}
         )
-        if self.speculative:
-            self.policy.add_request(req_idx, sampling_params)
-            return
         self.decoders.assign(req_idx, sampling_params).add_request(req_idx, sampling_params)
 
     def apply_staged_writes(self) -> None:

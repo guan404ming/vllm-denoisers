@@ -10,7 +10,7 @@ For automatic selection, omit `--scheduler-cls`.
 | --- | --- |
 | omitted | Align prefill chunks when required. Otherwise use vLLM’s default. |
 | `aligned` | Align prefill chunks and keep vLLM’s request order. With `speculate`, use the widest canvas at every step. |
-| `elastic` | Align prefill chunks and pick the speculation width per step from probed cost and measured gain. The default with `speculate`. |
+| `elastic` | Align prefill chunks and pick the speculation width per step from probed cost and measured gain. The default with `speculate`. Without CUDA graphs in a single process, use the widest canvas. |
 | `resact` | Apply the active limit and rank resident requests with a hold policy. |
 
 - All names follow vLLM’s scheduling mode. Add `--no-async-scheduling` for synchronous execution.

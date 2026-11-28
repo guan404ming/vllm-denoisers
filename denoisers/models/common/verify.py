@@ -49,6 +49,8 @@ def speculation_width(vllm_config, hf_config, policy, name: str) -> int:
             f"{name} speculate needs a block-aligned score and move decode_policy "
             "with a bidirectional commit and no kv, feedback, or probe policy."
         )
+    if vllm_config.model_config.enforce_eager:
+        raise ValueError(f"{name} speculate does not support --enforce-eager.")
     attention = vllm_config.attention_config
     if attention.backend not in (None, AttentionBackendEnum.FLASH_ATTN) or (
         attention.flash_attn_version not in (None, 4)
