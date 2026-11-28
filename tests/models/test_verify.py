@@ -11,6 +11,7 @@ from vllm.v1.attention.backend import AttentionType
 from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.core.sched.diffusion_scheduler import DiffusionAsyncScheduler, DiffusionScheduler
 
+from denoisers.canvas.state import CanvasState
 from denoisers.models.common import verify
 from denoisers.models.common.verify import GRAPH_SIZES, verify_block_diffusion
 from denoisers.runtime.model_state import BlockDiffusionModelState, ranged
@@ -180,6 +181,17 @@ def test_dummy_positions_stay_below_max_model_len():
     runtime.model = None
     positions = runtime.prepare_dummy_inputs(1, 20)["positions"]
     assert positions.tolist() == list(range(8)) * 2 + list(range(4))
+
+
+def test_removed_request_leaves_a_neutral_slot_for_dummy_runs():
+    runtime = object.__new__(BlockDiffusionModelState)
+    runtime.state = CanvasState(3, 4, 9, "cpu")
+    runtime.req_states = SimpleNamespace(req_id_to_index={"a": 1})
+    runtime.state.begin(1, torch.tensor([5, 6]), 30)
+    runtime.remove_request("a")
+    runtime.remove_request("missing")
+    assert runtime.state.shift.tolist() == [0, 0, 0]
+    assert runtime.state.start.tolist() == [0, 0, 0]
 
 
 class ExternalScheduler(DenoisersScheduler):
