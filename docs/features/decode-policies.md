@@ -24,6 +24,20 @@ vllm serve <model> --hf-overrides '{"decode_policy":"joint"}'
 
 A request can select a registered policy by name. The policy must match the attention layout of the default policy. See [request options](../configuration/settings.md#request-options).
 
+## Speculative decoding
+
+Speculation verifies the next denoising step and bets on the next block in the same forward. To turn it on, set `speculate` in `--hf-overrides`:
+
+```bash
+vllm serve <model> --hf-overrides '{"speculate":true}'
+```
+
+- The policy must score and move a block-aligned canvas with a bidirectional commit, such as `low_confidence`, `llada`, `dream`, or `fast_dllm`.
+- Speculation does not support `kv_policy`, `feedback_policy`, `--scheduler-cls resact`, or `--enforce-eager`.
+- The plugin runs speculation on `FLASH_ATTN` with FlashAttention 4.
+- Requests keep the default policy. The plugin ignores a per-request `decode_policy` and logs a warning.
+- The `elastic` scheduler picks the width at each step. See [Request scheduling](request-scheduling.md#choose-a-scheduler).
+
 ## Position selection
 
 Confidence measures the probability of the selected token. Entropy measures how spread out the probabilities are across candidates at that position.

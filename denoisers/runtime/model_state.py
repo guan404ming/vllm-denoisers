@@ -10,6 +10,7 @@ from vllm.v1.attention.backends.registry import AttentionBackendEnum
 from vllm.v1.worker.gpu.attn_utils import build_attn_metadata
 from vllm.v1.worker.gpu.model_states.interface import ModelState
 
+from denoisers.canvas.speculate import layout
 from denoisers.canvas.state import CanvasState
 from denoisers.policies import feedback, kv
 from denoisers.runtime.batch import (
@@ -18,6 +19,7 @@ from denoisers.runtime.batch import (
     per_token,
     prefill_block_ranges,
     prefill_segments,
+    query_lens,
 )
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime
@@ -57,6 +59,9 @@ class BlockDiffusionModelState(ModelState):
         self.causal_commit = policy.causal_commit
         self.causal_prefill = policy.causal_prefill
         self.ranged = ranged(vllm_config.attention_config.backend, policy, model)
+        self.speculative = getattr(hf_config, "speculate", False)
+        self._offsets = layout(1, device)[1] * hf_config.canvas_length
+        self._offset_batch = self._offset = None
         name = getattr(hf_config, "feedback_policy", None)
         self.feedback = None
         if name is not None:
@@ -69,9 +74,8 @@ class BlockDiffusionModelState(ModelState):
             device,
             hidden_size=hidden_size,
         )
-        self.decoders = Decoders(
-            policy, lambda cls: cls.from_config(hf_config, model), self.state, self.max_num_reqs
-        )
+        build = None if self.speculative else lambda cls: cls.from_config(hf_config, model)
+        self.decoders = Decoders(policy, build, self.state, self.max_num_reqs)
         self.kv = None
         name = getattr(hf_config, "kv_policy", None)
         if name is not None:
@@ -123,6 +127,7 @@ class BlockDiffusionModelState(ModelState):
             feedback=self.feedback,
             probe=self.probe,
             prefix_caching=self.vllm_config.cache_config.enable_prefix_caching,
+            speculate=self.speculative,
         ), None
 
     def compute_sample_logits(self, hidden_states: torch.Tensor) -> torch.Tensor:
@@ -171,6 +176,25 @@ class BlockDiffusionModelState(ModelState):
         )
         return self.kv.offsets(slots, rows, local, self._num_logits(input_batch))
 
+    def _wide(self, input_batch) -> bool:
+        widths = np.diff(input_batch.cu_num_logits_np[: input_batch.num_reqs + 1])
+        return self.speculative and bool((widths > self.state.block_length).any())
+
+    def _guess_offset(self, input_batch) -> torch.Tensor:
+        if self._offset_batch is input_batch:
+            return self._offset
+        block = self.state.block_length
+        rows = self._rows(input_batch)
+        slots = input_batch.idx_mapping[: input_batch.num_reqs]
+        local = (
+            torch.arange(input_batch.num_tokens, device=self.device)
+            - input_batch.query_start_loc[rows]
+        )
+        cell = (local // block).clamp(max=self._offsets.shape[1] - 1)
+        self._offset_batch = input_batch
+        self._offset = self._offsets[self.state.mode[slots][rows].long(), cell]
+        return self._offset
+
     def _set_blocks(self, ids: torch.Tensor) -> None:
         for router in getattr(self.model, "block_routers", ()):
             router.set_blocks(ids, self.num_route_blocks)
@@ -180,6 +204,8 @@ class BlockDiffusionModelState(ModelState):
         positions = self._positions[: input_batch.num_tokens_after_padding]
         positions.copy_(input_batch.positions[: positions.shape[0]])
         positions[:num_tokens] -= self._token_shift(input_batch)
+        if self._wide(input_batch):
+            positions[:num_tokens] -= self._guess_offset(input_batch)
         if self.kv is not None:
             positions[:num_tokens] += self._active_offset(input_batch)
         return positions
@@ -288,6 +314,8 @@ class BlockDiffusionModelState(ModelState):
         if self.kv is not None:
             shifted |= self._pruned(input_batch)[rows]
         positions = self._positions[:num_tokens]
+        if self._wide(input_batch):
+            positions = positions + self._guess_offset(input_batch)
         for group, table in enumerate(block_tables):
             size = kv_cache_config.kv_cache_groups[group].kv_cache_spec.block_size
             slots = table[rows, positions // size] * size + positions % size
@@ -383,6 +411,12 @@ class BlockDiffusionModelState(ModelState):
             causal = torch.zeros_like(causal)
         if self.causal_commit:
             causal = causal | self.state.committing[slots]
+        if self.speculative:
+            wide = self._num_logits(input_batch) > self.state.block_length
+            causal = torch.where(wide, 2 * self.state.mode[slots] - 1, 0).clamp(min=0)
+            if not self.causal_prefill:
+                long = query_lens(input_batch) > self.state.block_length
+                causal = torch.where(self.state.prefilling[slots] & long, -1, causal)
         self._causal_buf[:actual].copy_(causal)
         self._causal_buf[actual:num_reqs] = 0
         seq_lens = self._seq_lens[:num_reqs]
@@ -394,7 +428,7 @@ class BlockDiffusionModelState(ModelState):
         if not for_capture:
             self._fill_positions(input_batch)
             self._remap_slots(input_batch, block_tables, slot_mappings, kv_cache_config)
-        ranges = None if for_capture else self._doc_ranges(input_batch)
+        ranges = None if for_capture or self.speculative else self._doc_ranges(input_batch)
         causal = self._causal_buf[:num_reqs]
         if ranges and not self.ranged and cudagraph_mode != CUDAGraphMode.FULL:
             return self._segments(

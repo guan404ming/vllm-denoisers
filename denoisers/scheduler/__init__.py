@@ -1,5 +1,6 @@
 _BUILTINS = {
     "aligned": "denoisers.scheduler.aligned.AlignedScheduler",
+    "elastic": "denoisers.scheduler.elastic.ElasticScheduler",
     "resact": "denoisers.scheduler.resident_active.ResidentActiveScheduler",
 }
 
@@ -18,7 +19,9 @@ def select_scheduler(scheduler, *, align_prefill=False):
     if name in _BUILTINS:
         scheduler.scheduler_cls = _BUILTINS[name]
     elif isinstance(name, str) and "." not in name:
-        raise ValueError(f"Unknown --scheduler-cls {name!r}. Use aligned, resact, or a class path.")
+        raise ValueError(
+            f"Unknown --scheduler-cls {name!r}. Use aligned, elastic, resact, or a class path."
+        )
     elif align_prefill and not getattr(
         scheduler.get_scheduler_cls(), "aligns_denoiser_prefill", False
     ):

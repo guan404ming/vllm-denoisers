@@ -1,5 +1,6 @@
-from denoisers.hooks import draft_tokens
+from denoisers.hooks import cudagraphs, draft_tokens
 
 
 def apply() -> None:
+    cudagraphs.apply()
     draft_tokens.apply()

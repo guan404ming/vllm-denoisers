@@ -31,15 +31,49 @@ def default_backend(vllm_config, policy) -> AttentionBackendEnum:
     return AttentionBackendEnum.FLASH_ATTN
 
 
+def speculation_width(vllm_config, hf_config, policy, name: str) -> int:
+    canvas = hf_config.canvas_length
+    if not getattr(hf_config, "speculate", False):
+        return canvas
+    if (
+        not issubclass(policy, decode.ScoreMovePolicy)
+        or policy.causal_commit
+        or not policy.aligned
+        or policy.history_length
+        or policy.init_canvas is not decode.DecodePolicy.init_canvas
+        or getattr(hf_config, "feedback_policy", None) is not None
+        or getattr(hf_config, "kv_policy", None) is not None
+        or uses_probe(vllm_config.scheduler_config)
+    ):
+        raise ValueError(
+            f"{name} speculate needs a block-aligned score and move decode_policy "
+            "with a bidirectional commit and no kv, feedback, or probe policy."
+        )
+    if vllm_config.model_config.enforce_eager:
+        raise ValueError(f"{name} speculate does not support --enforce-eager.")
+    attention = vllm_config.attention_config
+    if attention.backend not in (None, AttentionBackendEnum.FLASH_ATTN) or (
+        attention.flash_attn_version not in (None, 4)
+    ):
+        raise ValueError(f"{name} speculate needs --attention-backend FLASH_ATTN on FA4.")
+    attention.backend = AttentionBackendEnum.FLASH_ATTN
+    attention.flash_attn_version = 4
+    return canvas * (4 if policy.causal_prefill and not policy.shifted else 2)
+
+
 def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
     policy = decode.registry.resolve(hf_config.decode_policy)
     if getattr(hf_config, "max_post_steps", 1) < 1:
         raise ValueError("max_post_steps must be at least 1.")
-    if vllm_config.diffusion_config is None:
-        vllm_config.diffusion_config = DiffusionConfig(canvas_length=hf_config.canvas_length)
-    if vllm_config.diffusion_config.canvas_length != hf_config.canvas_length:
-        raise ValueError(f"{name} needs canvas_length {hf_config.canvas_length}.")
     scheduler = vllm_config.scheduler_config
+    if getattr(hf_config, "speculate", False) and scheduler.scheduler_cls is None:
+        scheduler.scheduler_cls = "elastic"
+    select_scheduler(scheduler, align_prefill=policy.aligned and scheduler.enable_chunked_prefill)
+    width = speculation_width(vllm_config, hf_config, policy, name)
+    if vllm_config.diffusion_config is None:
+        vllm_config.diffusion_config = DiffusionConfig(canvas_length=width)
+    if vllm_config.diffusion_config.canvas_length != width:
+        raise ValueError(f"{name} needs canvas_length {width}.")
     if vllm_config.parallel_config.pipeline_parallel_size > 1:
         raise ValueError(f"{name} does not support pipeline parallelism.")
     if vllm_config.parallel_config.enable_batch_sharded_sampling:
@@ -56,10 +90,11 @@ def verify_block_diffusion(vllm_config, hf_config, name: str) -> None:
             f"{name} prefix caching needs --block-size (and any --prefix-match-unit) "
             f"that is a multiple of canvas_length {canvas}."
         )
-    select_scheduler(scheduler, align_prefill=aligned and scheduler.enable_chunked_prefill)
-    fit = scheduler.max_num_batched_tokens // canvas
+    if width > canvas and getattr(scheduler.get_scheduler_cls(), "elastic_widths", False):
+        hf_config.speculate_widths = list(range(canvas, width + 1, canvas))
+    fit = scheduler.max_num_batched_tokens // width
     if not fit:
-        raise ValueError(f"{name} needs max_num_batched_tokens >= canvas_length.")
+        raise ValueError(f"{name} needs max_num_batched_tokens >= canvas_length {width}.")
     if fit < scheduler.max_num_seqs and not uses_probe(scheduler):
         logger.info("%s: max_num_seqs %d -> %d to fit the batch", name, scheduler.max_num_seqs, fit)
         scheduler.max_num_seqs = fit

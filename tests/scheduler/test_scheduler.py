@@ -7,6 +7,16 @@ from denoisers.scheduler import aligned_prefill_chunk
 from denoisers.scheduler.hold import Aging, ShortestFirst
 from denoisers.scheduler.remaining import RemainingWork
 from denoisers.scheduler.scores import Probe, ScoreTable
+from denoisers.scheduler.widths import (
+    best_width,
+    cost_at,
+    fit_costs,
+    gain_bound,
+    median_floor,
+)
+
+COSTS = [(8, 6.3), (128, 6.7), (256, 8.9), (512, 14.6), (1024, 27.4), (2048, 52.0), (4096, 101.0)]
+GAINS = [1.09, 1.68, 1.85, 2.03]
 
 
 def test_aligned_prefill_chunk():
@@ -112,3 +122,37 @@ def test_the_first_score_of_a_block_selects_its_learned_future():
     assert work.estimate("b", 0, 0, (3.9, False)) == 3.9 + 38.0
     assert work.estimate("b", 0, 1, (1.2, False)) == 1.2 + 38.0
     assert work.estimate("unseen", 0, 0, (7.0, False)) == 7.0 + 20.0
+
+
+def test_cost_interpolates_and_extends_the_last_slope():
+    assert cost_at(COSTS, 4) == 6.3
+    assert cost_at(COSTS, 384) == (8.9 + 14.6) / 2
+    assert cost_at(COSTS, 8192) == 101.0 + 2 * (101.0 - 52.0)
+
+
+def test_width_falls_as_load_grows():
+    widths = [
+        best_width(size, 8, lambda size, rows: cost_at(COSTS, rows), GAINS)
+        for size in (1, 4, 8, 16, 64, 128)
+    ]
+    assert widths == [4, 4, 2, 2, 1, 1]
+
+
+def test_fit_removes_probe_noise_and_keeps_the_curve_monotone():
+    noisy = [(rows, cost * (1.05 if i % 2 else 0.95)) for i, (rows, cost) in enumerate(COSTS)]
+    fitted = fit_costs(noisy + [(rows + 1, cost) for rows, cost in COSTS])
+    assert all(a[1] <= b[1] for a, b in zip(fitted, fitted[1:]))
+    assert abs(cost_at(fitted, 1024) - 27.4) < 1.5
+
+
+def test_gain_bound_starts_at_the_width_and_tightens_with_samples():
+    assert gain_bound(0.0, 0.0, 4) == 4.0
+    assert gain_bound(50.0, 10.0, 1) == 1.0
+    assert gain_bound(3.0, 1.0, 4) == 4.0
+    assert 1.9 < gain_bound(1900.0, 1000.0, 4) < 2.1
+
+
+def test_median_floor_ignores_high_outliers_and_nears_the_median_with_samples():
+    assert median_floor([9.0, 1.0, 50.0]) == 1.0
+    many = [float(i) for i in range(1000)]
+    assert 440 <= median_floor(many) <= 500

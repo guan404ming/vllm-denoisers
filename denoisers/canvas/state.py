@@ -13,6 +13,7 @@ class CanvasState:
         mask_id: int,
         device: torch.device,
         hidden_size: int | None = None,
+        levels: int = 1,
     ):
         self.block_length = block_length
         self.mask_id = mask_id
@@ -32,6 +33,13 @@ class CanvasState:
         self.history_len = None
         self.prefilling = torch.zeros(max_num_reqs, dtype=torch.bool, device=device)
         self.committing = torch.zeros(max_num_reqs, dtype=torch.bool, device=device)
+        self.mode = torch.zeros(max_num_reqs, dtype=torch.int32, device=device)
+        self.guess = torch.full(shape, mask_id, dtype=torch.int64, device=device)
+        deep = (max_num_reqs, levels, block_length)
+        self.fill = torch.full(deep, mask_id, dtype=torch.int64, device=device)
+        self.ahead = torch.full(deep, mask_id, dtype=torch.int64, device=device)
+        self.ahead_step = torch.zeros(deep[:2], dtype=torch.int64, device=device)
+        self.ahead_done = torch.zeros(deep[:2], dtype=torch.bool, device=device)
         self.active = torch.arange(block_length, device=device).repeat(max_num_reqs, 1)
         self.active_len = torch.full(
             (max_num_reqs,), block_length, dtype=torch.int32, device=device
@@ -54,6 +62,10 @@ class CanvasState:
             self.history_len[slot] = 0
         self.prefilling[slot] = True
         self.committing[slot] = False
+        self.mode[slot] = 0
+        self.ahead[slot] = self.mask_id
+        self.ahead_step[slot] = 0
+        self.ahead_done[slot] = False
         self.active[slot] = torch.arange(self.block_length, device=self.active.device)
         self.active_len[slot] = self.block_length
         if self.soft is not None:
