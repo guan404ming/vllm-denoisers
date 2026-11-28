@@ -111,6 +111,7 @@ class BlockDiffusionModelState(ModelState):
         return ("generate",)
 
     def custom_sampler(self, sampler: Any) -> tuple[Any, Any] | None:
+        self.req_states = sampler.req_states
         return BlockDiffusionSampler(
             sampler,
             self.state,
@@ -140,6 +141,11 @@ class BlockDiffusionModelState(ModelState):
 
     def add_request(self, req_index: int, new_req_data: Any) -> None:
         self.state.reset(req_index)
+
+    def remove_request(self, req_id: str) -> None:
+        slot = self.req_states.req_id_to_index.get(req_id)
+        if slot is not None:
+            self.state.reset(slot)
 
     def _rows(self, input_batch) -> torch.Tensor:
         return per_token(torch.arange(input_batch.num_reqs, device=self.device), input_batch)
