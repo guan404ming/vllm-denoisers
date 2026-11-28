@@ -11,15 +11,17 @@ from vllm.v1.worker.gpu.sample.logprob import compute_topk_scores
 from vllm.v1.worker.gpu.sample.output import SamplerOutput
 from vllm.v1.worker.gpu.sample.penalties import use_penalty
 
+from denoisers.canvas.speculate import pack, plan, settle
 from denoisers.canvas.state import CanvasState
 from denoisers.canvas.transition import advance
 from denoisers.hooks import draft_tokens
-from denoisers.ops.sampling import exclude_filtered_mask
+from denoisers.ops.sampling import exclude_filtered_mask, uniform
 from denoisers.ops.stats import row_stats
 from denoisers.policies.feedback import FeedbackPolicy
 from denoisers.runtime.batch import finished_prefills, query_lens
 from denoisers.runtime.decoders import Decoders
 from denoisers.runtime.kv import KvRuntime, inverse_index
+from denoisers.runtime.replay import Replay
 from denoisers.scheduler.scores import Probe
 
 logger = init_logger("vllm.denoisers")
@@ -84,6 +86,7 @@ class BlockDiffusionSampler(CanvasSampler):
         feedback: FeedbackPolicy | None = None,
         probe: Probe | None = None,
         prefix_caching: bool = False,
+        speculate: bool = False,
     ):
         self.sampling_states = sampler.sampling_states
         self.logprob_token_ids_state = sampler.logprob_token_ids_state
@@ -111,6 +114,23 @@ class BlockDiffusionSampler(CanvasSampler):
         self._budget = 0
         if kv is not None:
             draft_tokens.provider = self.draft_widths
+        self.speculative = speculate
+        self.policy = decoders.default
+        self._cells = np.maximum(np.arange(state.block_length) - self.policy.shifted, 0)
+        self._cells_gpu = torch.from_numpy(self._cells).to(device)
+        self._mode_host = torch.zeros(max_num_reqs, dtype=torch.int32, pin_memory=True)
+        self._guess_need = torch.zeros_like(self._need)
+        self._guess_need_host = torch.zeros(max_num_reqs, dtype=torch.int32, pin_memory=True)
+        deep = state.ahead_step.shape
+        self._ahead_done_host = torch.zeros(deep, dtype=torch.bool, pin_memory=True)
+        self._ahead_need = torch.zeros(deep, dtype=torch.int32, device=device)
+        self._ahead_need_host = torch.zeros(deep, dtype=torch.int32, pin_memory=True)
+        self._replay = self._settle
+        if speculate and device.type == "cuda":
+            for name, value in list(vars(self.policy).items()):
+                if isinstance(value, torch.Tensor):
+                    setattr(self.policy, name, value.to(device))
+            self._replay = Replay(torch.compile(self._settle, dynamic=True))
 
     def draft_widths(self, input_batch) -> np.ndarray:
         self._need_event.synchronize()
@@ -129,6 +149,9 @@ class BlockDiffusionSampler(CanvasSampler):
         self.state.stop_at(
             req_idx, {sampling_params.eos_token_id, *(sampling_params.stop_token_ids or ())}
         )
+        if self.speculative:
+            self.policy.add_request(req_idx, sampling_params)
+            return
         self.decoders.assign(req_idx, sampling_params).add_request(req_idx, sampling_params)
 
     def apply_staged_writes(self) -> None:
@@ -181,6 +204,11 @@ class BlockDiffusionSampler(CanvasSampler):
             self._need[slot] = block - shift
             self._need_host[slot] = block - shift
             self._commit_host[slot] = False
+            if self.speculative:
+                self.req_states.draft_tokens[slot, block:] = state.mask_id
+                self._mode_host[slot] = 0
+                self._ahead_done_host[slot] = False
+                self._ahead_need_host[slot] = block
             if self.kv is not None:
                 self.kv.reset(slot)
             self._stash.pop(slot, None)
@@ -433,6 +461,116 @@ class BlockDiffusionSampler(CanvasSampler):
             )
         return parts
 
+    def _narrow(self, slots_np, widths_np) -> bool:
+        block = self.state.block_length
+        return bool((widths_np <= block).all()) and not self._mode_host.numpy()[slots_np].any()
+
+    def _speculate(self, hidden, input_batch, rows_np, widths_np) -> None:
+        state, policy = self.state, self.policy
+        block, device = state.block_length, hidden.device
+        slots_np = input_batch.idx_mapping_np[rows_np]
+
+        def gpu(values):
+            return async_tensor_h2d(values, device=device)
+
+        n = len(rows_np)
+        mode = self._mode_host.numpy()[slots_np]
+        flags = plan(
+            mode,
+            self._commit_host.numpy()[slots_np],
+            self._ahead_done_host.numpy()[slots_np],
+            widths_np,
+            block,
+        )
+        groups = len(flags.groups)
+        sizes = [int(pick.sum()) for pick, _ in flags.groups]
+        owner = np.concatenate([np.where(pick)[0] for pick, _ in flags.groups])
+        group = np.repeat(np.arange(groups), sizes)
+        local = np.concatenate([local[pick] for pick, local in flags.groups])
+        starts = np.cumsum(widths_np) - widths_np
+        cells = np.minimum(
+            (starts[owner] + local * block)[:, None] + self._cells,
+            (starts + widths_np - 1)[owner][:, None],
+        ).reshape(-1)
+        dest = ((group * n + owner)[:, None] * block + np.arange(block)).reshape(-1)
+        ends = starts + np.minimum(widths_np, block) - 1
+        packed = np.concatenate([pack(flags), (widths_np // block)[None]])
+        parts = [rows_np, owner, np.repeat(owner, block), cells, dest, ends, packed.reshape(-1)]
+        rows, owner, spread, cells, dest, ends, packed = gpu(np.concatenate(parts)).tensor_split(
+            np.cumsum([len(part) for part in parts])[:-1].tolist()
+        )
+        packed = packed.view(-1, n)
+        picked = owner.split(sizes)
+        slots = input_batch.idx_mapping[: input_batch.num_reqs][rows]
+        partial = (mode == 0) & (widths_np < block)
+        if partial.any():
+            state.truncate(slots[gpu(partial)], gpu(widths_np[partial].astype(np.int64)))
+        expanded = slots[spread]
+        if not partial.any():
+            main, guess, ahead, *follow = picked
+            masked = torch.cat(
+                [
+                    state.canvas[slots[main]] == state.mask_id,
+                    state.guess[slots[guess]] == state.mask_id,
+                    torch.ones(len(ahead), block, dtype=torch.bool, device=device),
+                    *(
+                        state.ahead[slots[rows], level] == state.mask_id
+                        for level, rows in enumerate(follow)
+                    ),
+                ]
+            ).view(-1)
+            need, later = self._need_host.numpy()[slots_np], self._ahead_need_host.numpy()[slots_np]
+            (pick_main, _), (pick_guess, _), (pick_ahead, _), *pick_follow = flags.groups
+            count = int(
+                need[pick_main].sum()
+                + self._guess_need_host.numpy()[slots_np][pick_guess].sum()
+                + block * pick_ahead.sum()
+                + sum(later[pick, level].sum() for level, (pick, _) in enumerate(pick_follow))
+            )
+            keep = torch.argsort((~masked).to(torch.int8), stable=True)[:count]
+            cells, expanded = cells[keep], expanded[keep]
+        raw = self.compute_logits(hidden[torch.cat([cells, ends]) if policy.shifted else cells])
+        logits = self._process(raw[: len(cells)], expanded, slots_np)
+        kept = slice(None) if partial.any() else keep
+        spots = dest[kept]
+
+        def draw(ahead: int) -> tuple[torch.Tensor, torch.Tensor]:
+            noise = None
+            if policy.temperature > 0:
+                salt, step = state.salt[slots], state.step[slots]
+                main, guess, bet, *follow = picked
+                salts = [salt[main], salt[guess], salt[bet] + 1]
+                steps = [step[main], step[guess] + 1, torch.zeros_like(bet)]
+                for level, where in enumerate(follow):
+                    salts.append(salt[where] + level + 1)
+                    steps.append(state.ahead_step[slots[where], level])
+                noise = uniform(torch.cat(salts), torch.cat(steps) + ahead, block)
+                noise = noise[:, self._cells_gpu].reshape(-1)[kept]
+            tokens, score = policy.score(logits, noise)
+            scores = torch.zeros(groups * n * block, device=device)
+            choices = torch.zeros(groups * n * block, dtype=torch.int64, device=device)
+            scores[spots], choices[spots] = score.float(), tokens
+            return scores.view(groups, n, block), choices.view(groups, n, block)
+
+        confidences, choices = draw(0)
+        later = draw(1) if policy.temperature > 0 else None
+        seed = policy.next_seed(raw[len(cells) :].unsqueeze(1)) if policy.shifted else None
+        self._replay(rows, slots, packed, confidences, choices, *(later or (None, None)), seed)
+
+    def _settle(self, rows, slots, packed, confidences, choices, noise_scores, noise_choices, seed):
+        state = self.state
+        later = None if noise_scores is None else (noise_scores, noise_choices)
+        row_sampled, row_num_sampled, drafts, _ = settle(
+            state, slots, packed[:-1], confidences, choices, self.policy, later, seed
+        )
+        self._need[slots] = (state.canvas[slots] == state.mask_id).sum(1, dtype=torch.int32)
+        self._ahead_need[slots] = (state.ahead[slots] == state.mask_id).sum(2, dtype=torch.int32)
+        self._guess_need[slots] = (state.guess[slots] == state.mask_id).sum(1, dtype=torch.int32)
+        drafts = drafts[:, : self.req_states.draft_tokens.shape[1]]
+        self.req_states.draft_tokens[slots] = drafts.to(self.req_states.draft_tokens.dtype)
+        self._sampled[rows] = row_sampled.to(self._sampled.dtype)
+        self._num_sampled[rows] = row_num_sampled.to(self._num_sampled.dtype)
+
     def _decode(self, hidden, input_batch, rows_np, widths_np, sampled, num_sampled):
         block = self.state.block_length
         device = hidden.device
@@ -451,6 +589,9 @@ class BlockDiffusionSampler(CanvasSampler):
         for start in range(0, len(rows_np), per_chunk):
             end = min(start + per_chunk, len(rows_np))
             chunk = hidden[ends_np[start] - widths_np[start] : ends_np[end - 1]]
+            if self.speculative and not self._narrow(slots_np[start:end], widths_np[start:end]):
+                self._speculate(chunk, input_batch, rows_np[start:end], widths_np[start:end])
+                continue
             parts += self._step(
                 chunk,
                 input_batch,
@@ -463,6 +604,11 @@ class BlockDiffusionSampler(CanvasSampler):
             )
         self._need_host.copy_(self._need, non_blocking=True)
         self._commit_host.copy_(self.state.committing, non_blocking=True)
+        if self.speculative:
+            self._mode_host.copy_(self.state.mode, non_blocking=True)
+            self._guess_need_host.copy_(self._guess_need, non_blocking=True)
+            self._ahead_done_host.copy_(self.state.ahead_done, non_blocking=True)
+            self._ahead_need_host.copy_(self._ahead_need, non_blocking=True)
         if self.kv is not None:
             self.kv.sync()
         self._need_event.record()

@@ -274,3 +274,40 @@ def test_scheduler_short_names_follow_final_mode(monkeypatch, name, async_mode, 
     scheduler.async_scheduling = async_mode
     monkeypatch.setattr(DiffusionScheduler, "__init__", lambda self, vllm_config: None)
     assert type(scheduler.get_scheduler_cls()(vllm_config=config)) is expected
+
+
+@pytest.mark.parametrize(
+    ("policy", "count"),
+    [("low_confidence", 4), ("llada", 2), ("dream", 2), ("fast_dllm", 2)],
+)
+def test_speculate_widens_the_canvas_on_fa4(policy, count):
+    config, hf_config = make_config()
+    config.diffusion_config = None
+    config.attention_config = SimpleNamespace(backend=None, flash_attn_version=None)
+    config.scheduler_config.max_num_batched_tokens = count * BLOCK
+    hf_config.decode_policy, hf_config.kv_policy, hf_config.speculate = policy, None, True
+    verify_block_diffusion(config, hf_config, "test")
+    assert config.diffusion_config.canvas_length == count * BLOCK
+    assert config.attention_config.backend == AttentionBackendEnum.FLASH_ATTN
+    assert config.attention_config.flash_attn_version == 4
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"kv_policy": "masked"},
+        {"decode_policy": "nemotron_diffusion"},
+        {"decode_policy": "indel"},
+        {"backend": AttentionBackendEnum.TRITON_ATTN},
+    ],
+)
+def test_speculate_rejects_what_the_tree_cannot_verify(change):
+    config, hf_config = make_config()
+    config.diffusion_config = None
+    config.attention_config = SimpleNamespace(
+        backend=change.pop("backend", None), flash_attn_version=None
+    )
+    hf_config.kv_policy, hf_config.speculate = None, True
+    vars(hf_config).update(change)
+    with pytest.raises(ValueError, match="speculate"):
+        verify_block_diffusion(config, hf_config, "test")

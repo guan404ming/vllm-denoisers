@@ -77,6 +77,7 @@ def test_mixed_prefill_seeds_only_finished_requests():
     sampler.state = state
     sampler.decoders = decoders
     sampler.aligned = False
+    sampler.speculative = False
     sampler._need_event = SimpleNamespace(synchronize=lambda: None)
     sampler._need = sampler._need_host = torch.zeros(5)
     sampler._commit_host = torch.zeros(5, dtype=torch.bool)
