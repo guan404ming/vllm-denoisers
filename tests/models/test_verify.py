@@ -45,7 +45,7 @@ def make_config():
             pipeline_parallel_size=1, enable_batch_sharded_sampling=False
         ),
         cache_config=SimpleNamespace(enable_prefix_caching=False, sliding_window=None),
-        model_config=SimpleNamespace(get_head_size=lambda: 64, enforce_eager=False),
+        model_config=SimpleNamespace(get_head_size=lambda: 64),
         attention_config=SimpleNamespace(backend=AttentionBackendEnum.FLASH_ATTN),
         compilation_config=SimpleNamespace(**dict.fromkeys(GRAPH_SIZES)),
     )
@@ -292,6 +292,7 @@ def test_speculate_widens_the_canvas_on_fa4(policy, count):
     config.diffusion_config = None
     config.attention_config = SimpleNamespace(backend=None, flash_attn_version=None)
     config.scheduler_config.max_num_batched_tokens = count * BLOCK
+    config.model_config.enforce_eager = True
     hf_config.decode_policy, hf_config.kv_policy, hf_config.speculate = policy, None, True
     verify_block_diffusion(config, hf_config, "test")
     assert config.diffusion_config.canvas_length == count * BLOCK
@@ -358,7 +359,6 @@ def test_elastic_keeps_the_widest_canvas_without_probed_costs(monkeypatch):
         {"decode_policy": "nemotron_diffusion"},
         {"decode_policy": "indel"},
         {"backend": AttentionBackendEnum.TRITON_ATTN},
-        {"enforce_eager": True},
     ],
 )
 def test_speculate_rejects_what_the_tree_cannot_verify(change):
@@ -367,7 +367,6 @@ def test_speculate_rejects_what_the_tree_cannot_verify(change):
     config.attention_config = SimpleNamespace(
         backend=change.pop("backend", None), flash_attn_version=None
     )
-    config.model_config.enforce_eager = change.pop("enforce_eager", False)
     hf_config.kv_policy, hf_config.speculate = None, True
     vars(hf_config).update(change)
     with pytest.raises(ValueError, match="speculate"):
